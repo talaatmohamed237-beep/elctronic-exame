@@ -11,20 +11,21 @@
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
   :root{
-    --ink:#12213b;        
-    --paper:#f6f3ea;      
+    --ink:#12213b;        /* deep navy ink */
+    --paper:#f6f3ea;      /* warm paper (legacy, kept for inner surfaces) */
     --paper-2:#efe9d8;
-    --brass:#b8863a;      
+    --brass:#b8863a;      /* brass/gold accent — progress bar, selection, timer */
     --brass-deep:#8f6425;
     --slate:#3d5266;
     --good:#2f7d5b;
     --bad:#b0473e;
     --line:#e2d6c6;
 
+    /* new theme tokens for the dashboard shell */
     --rose:#e0577c;
     --rose-deep:#c23f63;
     --teal:#1f7a8c;
@@ -61,6 +62,14 @@
   }
   .opt-btn:active{ transform: scale(0.98); }
 
+  .shake{ animation: shake .4s; }
+  @keyframes shake{
+    10%,90%{ transform: translateX(-1px); }
+    20%,80%{ transform: translateX(2px); }
+    30%,50%,70%{ transform: translateX(-4px); }
+    40%,60%{ transform: translateX(4px); }
+  }
+
   .fade-in{ animation: fadeIn .35s ease both; }
   @keyframes fadeIn{ from{ opacity:0; transform: translateY(6px);} to{ opacity:1; transform:translateY(0);} }
 
@@ -69,21 +78,26 @@
 
   .arabic-num{ font-feature-settings: "lnum"; }
 
+  /*
+    Math expressions embedded inside Arabic (RTL) sentences need an
+    explicit LTR bidi isolate — otherwise the Unicode Bidi Algorithm can
+    reorder number groups/operators/parentheses relative to each other
+    (e.g. "٢ = ١٦" flipping to "١٦ = ٢"). <bdi dir="ltr"> keeps the
+    conventional left-to-right math reading order intact while staying
+    correctly embedded inside the surrounding RTL paragraph.
+  */
   .math-ltr{
     unicode-bidi: isolate;
     direction: ltr;
     display: inline-block;
   }
 
+  /* corner-bracket accents on the framed cards */
   .corner-mark{
     position:absolute;
     width:1.75rem;
     height:1.75rem;
     pointer-events:none;
-  }
-
-  .frac-bar{
-    line-height: 1.1;
   }
 </style>
 </head>
@@ -93,517 +107,570 @@
 <script type="text/babel">
 const { useState, useEffect, useRef, useMemo } = React;
 
-const QUESTIONS = [
-  {
-    q: "ما العدد الذي سدسه يساوي \\f{٢٥||٣} ؟",
-    options: ["٣٠", "٤٠", "٥٠", "٦٠"],
-    correctIndex: 2,
-  },
-  {
-    q: "قارن بين:\nالقيمة الأولى: \\f{٤||٥} × ١٠٠\nالقيمة الثانية: \\f{١||٣} × ٢٤٠",
-    options: ["القيمة الأولى أكبر", "القيمة الثانية أكبر", "القيمتان متساويتان", "المعطيات غير كافية"],
-    correctIndex: 2,
-    layout: "compare",
-  },
-  {
-    q: "قارن بين:\nالقيمة الأولى: \\f{١||٦} - \\f{١||١٢}\nالقيمة الثانية: \\f{١||١٢} - \\f{١||٦}",
-    options: ["القيمة الأولى أكبر", "القيمة الثانية أكبر", "القيمتان متساويتان", "المعطيات غير كافية"],
-    correctIndex: 0,
-    layout: "compare",
-  },
-  {
-    q: "أوجد قيمة:\nنصف الثلث × ثلث الربع × ربع الخمس",
-    options: ["\\f{١||١٤٤٠}", "\\f{١||٧٢٠}", "\\f{١||٣٦٠}", "\\f{١||١٨٠}"],
-    correctIndex: 0,
-  },
-  {
-    q: "تدرس هند ٣ ساعات يوميًا، ما الكسر الذي يمثل ما تدرسه هند في اليوم؟",
-    options: ["\\f{١||٦}", "\\f{١||٨}", "\\f{١||٤}", "\\f{١||٢}"],
-    correctIndex: 1,
-  },
-  {
-    q: "قارن بين:\nالقيمة الأولى: ١٥\nالقيمة الثانية: ٩٠ × \\f{١||٦}",
-    options: ["القيمة الأولى أكبر", "القيمة الثانية أكبر", "القيمتان متساويتان", "المعطيات غير كافية"],
-    correctIndex: 2,
-    layout: "compare",
-  },
-  {
-    q: "أحسب قيمة:\n\\Big( \\f{١ + ٢||١ - ٢} - \\f{١ - ٢||١ + ٢} \\Big)",
-    options: ["- \\f{١٠||٣}", "- \\f{٨||٣}", "\\f{٨||٣}", "\\f{١٠||٣}"],
-    correctIndex: 1,
-  },
-  {
-    q: "احسب قيمة:\n\\f{٣||٢} + \\big( \\f{٧||٤} × \\f{١||٧} \\big) - \\big( \\f{٥||٤} × \\f{٢||٥} \\big) - \\f{٧||٤}",
-    options: ["١", "\\f{١||٢}", "- \\f{١||٢}", "-٢"],
-    correctIndex: 2,
-  },
-  {
-    q: "إذا كان س = \\f{١٠٠||ص} = \\f{س||ص} ، أوجد قيمة ص",
-    options: ["١", "١٠", "٥٠", "١٠٠"],
-    correctIndex: 0,
-  },
-  {
-    q: "إذا كان \\F(\\f{٨||١٥};;س) = \\F(\\f{٢||٣};;\\f{٥||٤}) ، أوجد قيمة س؟",
-    options: ["\\f{١||٤}", "\\f{١||٢}", "١", "٢"],
-    correctIndex: 2,
-  },
-  {
-    q: "إذا كان س + \\f{١||س} = ٣ + \\f{١||٣} ، قارن بين:\nالقيمة الأولى: س\nالقيمة الثانية: ٢",
-    options: ["القيمة الأولى أكبر", "القيمة الثانية أكبر", "القيمتان متساويتان", "المعطيات غير كافية"],
-    correctIndex: 3,
-    layout: "compare",
-  },
-  {
-    q: "قارن بين:\nالقيمة الأولى: \\f{٣ + ١||٥ + ٥}\nالقيمة الثانية: \\f{٣||٥} + \\f{٢||٥}",
-    options: ["القيمة الأولى أكبر", "القيمة الثانية أكبر", "القيمتان متساويتان", "المعطيات غير كافية"],
-    correctIndex: 1,
-    layout: "compare",
-  },
-  {
-    q: "أحسب قيمة:\n\\big( \\f{٤||١٠} + \\f{٣||٥} \\big) - \\big( \\f{٦||٨} + \\f{١||٤} \\big)",
-    options: ["٠", "١", "٢", "٣"],
-    correctIndex: 0,
-  },
-  {
-    q: "إذا كان ص = \\f{١||٢} س ، ع = \\f{١||٢} ص\nس + ص + ع = ٧ ، أوجد قيمة ع",
-    options: ["١", "٣", "٥", "٧"],
-    correctIndex: 0,
-  },
-  {
-    q: "احسب قيمة:\n\\f{١٤||١٤} × \\f{٧||٢} - \\Big( \\big( ١ - \\f{١||٢} \\big) × ٢ \\Big) - \\f{٧||٢}",
-    options: ["١", "-١", "٢", "-٢"],
-    correctIndex: 1,
-  },
-  {
-    q: "إذا كان أ = \\f{١||ب} ، ب = \\f{١||ج} ، ج = \\f{١||د} ،  د = \\f{\\R(٦٤)||\\R(٤٩)} \nأوجد قيمة \\big( أ + ج \\big) × د",
-    options: ["\\f{٣||٤}", "٢", "\\f{٧||٨}", "٠"],
-    correctIndex: 1,
-  },
-  {
-    q: "خزان مملوء إلى خُمسه، فإذا أضفنا إليه ٥٦ لترًا، أصبح ممتلئًا، ما سعة الخزان؟",
-    options: ["٦٠", "٦٥", "٧٠", "٧٥"],
-    correctIndex: 2,
-  },
-  {
-    q: "إذا كان \\f{س||١٢} + \\f{ص||١٢} = \\f{٥||١٢} ، قارن بين:\nالقيمة الأولى: س + ص\nالقيمة الثانية: ٥",
-    options: ["القيمة الأولى أكبر", "القيمة الثانية أكبر", "القيمتان متساويتان", "المعطيات غير كافية"],
-    correctIndex: 2,
-    layout: "compare",
-  },
-  {
-    q: "إذا كان م = \\f{٣١||٥٠} ، ن = \\f{٥٩||١٠٠} ، ل = \\f{٢٩٩||٥٠٠}\nفأي الآتي ترتيبهم تصاعديًا؟",
-    options: ["ن ، ل ، م", "ن ، م ، ل", "م ، ن ، ل", "م ، ل ، ن"],
-    correctIndex: 0,
-    layout: "compare",
-  },
-  {
-    q: "قارن بين:\nالقيمة الأولى: \u200F-\u200F\\f{١||٢} \u200F÷\u200F \u200F-\u200F\\f{١||٢}\nالقيمة الثانية: ١",
-    options: ["القيمة الأولى أكبر", "القيمة الثانية أكبر", "القيمتان متساويتان", "المعطيات غير كافية"],
-    correctIndex: 2,
-    layout: "compare",
-  },
-];
+/* ============================================================
+   DATA
+   ------------------------------------------------------------
+   Source text was a scanned/OCR'd worksheet; a handful of items
+   (flagged below with needsReview:true) had corrupted numbers or
+   options in the original, so the numeric working doesn't fully
+   reconcile with the given choices. correctIndex is my best
+   mathematical judgment for those — double check before using
+   this as an official answer key.
 
-const QUIZ_TITLE = "اختبار ٢";
+   Note on backticks: segments wrapped in `...` are pure math/algebra
+   expressions (multiple numbers/variables joined by operators). They
+   are rendered through renderMathText() as LTR-isolated <bdi> spans so
+   the operator/number order never gets scrambled by RTL bidi reordering.
+   Everything outside backticks is plain Arabic sentence text.
+   ============================================================ */
+const QUESTIONS = [
+{
+  q: "عددان زوجيان متتاليان مجموعهما ١٨، ما العدد الأكبر؟",
+  options: [
+  "٦",
+  "٨",
+  "١٠",
+  "١٢"],
+
+  correctIndex: 2,
+  needsReview: true
+},
+{
+  q: "احسب قيمة: ٢٥ ÷ ٥ + ٢٠ × (١٠ - ٥)",
+  options: [
+  "٥",
+  "١٠٥",
+  "١٢٥",
+  "١٧٥"],
+
+  correctIndex: 1,
+  needsReview: true
+},
+{
+  q: "إذا كان مجموع الأعداد الصحيحة من ١ إلى ١٠ يساوي ٥٥، كم مجموع الأعداد الصحيحة من ١ إلى ٢٠؟",
+  options: [
+  "٢٥٥",
+  "٢١٠",
+  "١١٠",
+  "٧٥"],
+
+  correctIndex: 1,
+  needsReview: true
+},
+{
+  q: "٧ أمثال عدد + ٢ = ١٦، ما هذا العدد؟",
+  options: [
+  "١",
+  "٢",
+  "٧",
+  "٩"],
+
+  correctIndex: 1,
+  needsReview: true
+},
+{
+  q: "عددان صحيحان متتاليان مجموعهما ١٣، \n\nقارن بين:\n\nالقيمة الأولى: مربع العدد الأصغر\nالقيمة الثانية: ٤٩",
+  options: [
+  "القيمة الأولى أكبر",
+  "القيمة الثانية أكبر",
+  "القيمتان متساويتان",
+  "المعطيات غير كافية"],
+
+  correctIndex: 1,
+  needsReview: true
+},
+{
+  q: "س، ص، ع أعداد فردية، أي الآتي زوجي؟",
+  options: [
+  "س + ص + ع",
+  "س × ص × ع",
+  "س² ص² ع²",
+  "س ص + س ع"],
+
+  correctIndex: 3,
+  needsReview: true
+},
+{
+  q: "احسب قيمة: ٩٩ ÷ ٩٩ × ٩٩",
+  options: [
+  "١/٩٩",
+  "١",
+  "٩٩",
+  "٩٨٠١"],
+
+  correctIndex: 2,
+  needsReview: true
+},
+{
+  q: "إذا كان س + ٢ص = ٢٢ ، س = ٢ ، قارن بين:\n\nالقيمة الأولى: ١٢\n\nالقيمة الثانية: (س + ص) ÷ ١٢",
+  options: [
+  "القيمة الأولى أكبر",
+  "القيمة الثانية أكبر",
+  "القيمتان متساويتان",
+  "المعطيات غير كافية"],
+
+  correctIndex: 0,
+  needsReview: true
+},
+{
+  q: "احسب قيمة: ٦ - ٤ × ٢(-٣) ÷ ٦",
+  options: [
+  "١",
+  "٥",
+  "١٠",
+  "١٢"],
+
+  correctIndex: 2,
+  needsReview: true
+},
+{
+  q: "كم عدد من مضاعفات ٣ يقع بين ١ ، ٣١؟",
+  options: [
+  "٧",
+  "٨",
+  "٩",
+  "١٠"],
+
+  correctIndex: 3,
+  needsReview: true
+},
+{
+  q: "٤ أعداد زوجية متتالية نصف مجموعهم = ١٠.\nما العدد الأكبر؟",
+  options: [
+  "٢",
+  "٤",
+  "٨",
+  "١٢"],
+
+  correctIndex: 2,
+  needsReview: true
+},
+{
+  q: "يشرب محمد ٣ لتر ماء يوميًا ويشرب علي ٢٠ لتر أسبوعيًا، \nقارن بين :\n\nالقيمة الأولى: عدد اللترات التي يشربها محمد يوميًا\n\nالقيمة الثانية: عدد اللترات التي يشربها علي يوميًا",
+  options: [
+  "القيمة الأولى أكبر",
+  "القيمة الثانية أكبر",
+  "القيمتان متساويتان",
+  "المعطيات غير كافية"],
+
+  correctIndex: 0,
+  needsReview: true
+},
+{
+  q: "إذا كان ٨س = ٦٤، أوجد ٣س؟",
+  options: [
+  "١٦",
+  "٢٤",
+  "٢٨",
+  "٣٢"],
+
+  correctIndex: 1,
+  needsReview: true
+},
+{
+  q: "إذا كان يحتاج الأسد إلى ٧ محاولات ليصطاد فريسة، كم فريسة يصيد في ٦٣ محاولة؟",
+  options: [
+  "٧",
+  "٨",
+  "٩",
+  "١٠"],
+
+  correctIndex: 2,
+  needsReview: true
+},
+{
+  q: "إذا كان ص = ١/٢ س ، ع = ١/٢ ص\nس + ص + ع = ٧ ، أوجد قيمة ع",
+  options: [
+  "١",
+  "٣",
+  "٥",
+  "٧"],
+
+  correctIndex: 0,
+  needsReview: true
+},
+{
+  q: "أي مما يلي باقي القسمة على ٥ يساوي ٢؟",
+  options: [
+  "٢٢٢",
+  "٣١٠",
+  "٣٣٣",
+  "٥١٨"],
+
+  correctIndex: 0,
+  needsReview: true
+},
+{
+  q: "دخل شخص ٤ سباقات:\n\nمسافة السباق الأول ١٠٠٠ متر\n\nومسافة السباق الثاني نصف مسافة السباق الأول\n\nومسافة السباق الثالث نصف مسافة السباق الثاني\n\nومسافة السباق الرابع تساوي مسافة السباق الثالث\n\nأوجد مجموع المسافات التي قطعها في الأربع سباقات",
+  options: [
+  "١ كلم",
+  "٢ كلم",
+  "٣ كلم",
+  "٤ كلم"],
+
+  correctIndex: 1,
+  needsReview: true
+},
+{
+  q: "ما العدد الذي إذا قسم على ٤ ، وعلى ٥ كان الباقي ٢؟",
+  options: [
+  "٢٠",
+  "٢٢",
+  "٢٤",
+  "٢٥"],
+
+  correctIndex: 1,
+  needsReview: true
+},
+{
+  q: "إذا كان أ = ٢٠ ، ب = ٦٠ ، قارن بين:\n\nالقيمة الأولى: ١٠٠٠ أ + ١٥ ب\n\nالقيمة الثانية: ٥٠ أ + ٢٥ ب",
+  options: [
+  "القيمة الأولى أكبر",
+  "القيمة الثانية أكبر",
+  "القيمتان متساويتان",
+  "المعطيات غير كافية"],
+
+  correctIndex: 0,
+  needsReview: true
+},
+{
+  q: "عددان أوليان مجموعهما ٨، ما العدد الأكبر؟",
+  options: [
+  "٢",
+  "٣",
+  "٥",
+  "٧"],
+
+  correctIndex: 2,
+  needsReview: true
+}];
+
+
+const QUIZ_TITLE = "اختبار ١";
 const QUIZ_KICKER = "اختبار القدرات الكمي";
-const QUIZ_SUBTITLE = "الكسور الاعتيادية — ٢٠ سؤالًا";
+const QUIZ_SUBTITLE = "الأعداد والعمليات عليها — ٢٠ سؤالًا";
 const SECONDS_PER_QUESTION = 60;
 const TOTAL_TIME = QUESTIONS.length * SECONDS_PER_QUESTION;
 
-function toArabicDigits(n){
-  const map = ["٠","١","٢","٣","٤","٥","٦","٧","٨","٩"];
-  return String(n).replace(/[0-9]/g, d => map[d]);
+function toArabicDigits(n) {
+  const map = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
+  return String(n).replace(/[0-9]/g, (d) => map[d]);
 }
 
-function formatTime(sec){
-  const m = Math.floor(sec/60);
-  const s = sec%60;
-  return `${toArabicDigits(String(m).padStart(2,"0"))}:${toArabicDigits(String(s).padStart(2,"0"))}`;
+function formatTime(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${toArabicDigits(String(m).padStart(2, "0"))}:${toArabicDigits(String(s).padStart(2, "0"))}`;
 }
 
-function Fraction({ num, den }){
-  return (
-    <span className="inline-grid mx-1 align-middle frac-bar font-bold" style={{verticalAlign:"middle", gridTemplateRows:"1fr 1fr"}}>
-      <span dir="ltr" className="flex flex-col justify-end items-center px-1 pb-[1px] text-[0.95em] border-b-[2px]" style={{borderColor:"currentColor"}}>{num}</span>
-      <span dir="ltr" className="flex flex-col justify-start items-center px-1 pt-[1px] text-[0.95em]">{den}</span>
-    </span>
-  );
-}
-
-function BigFraction({ num, den }){
-  return (
-    <span className="inline-grid mx-1.5 align-middle frac-bar font-bold" style={{verticalAlign:"middle", gridTemplateRows:"1fr 1fr"}}>
-      <span className="flex flex-col justify-end items-center px-2 pb-1 border-b-[2px]" style={{borderColor:"currentColor"}}>{num}</span>
-      <span className="flex flex-col justify-start items-center px-2 pt-1">{den}</span>
-    </span>
-  );
-}
-  function ArabicRoot({ children }){
-  return (
-    <span dir="rtl" className="inline-flex items-stretch mx-0.5 align-middle" style={{ verticalAlign: "middle" }}>
-      <svg width="12" viewBox="0 0 12 24" className="shrink-0" stroke="currentColor" strokeWidth="2" fill="none" style={{ transform: "translateY(1px)" }}>
-        <path d="M11 13 L7 22 L1 2" strokeLinejoin="round" strokeLinecap="round" />
-      </svg>
-      <span className="border-t-[2px] border-current pl-1 pr-0.5 inline-flex flex-col justify-center" style={{ transform: "translateY(1px)" }}>
-        {children}
-      </span>
-    </span>
-  );
-}
-
-function renderInlineMath(text, keyPrefix){
-  if (typeof text !== "string") return text;
-  const bigRe = /\\F\(([\s\S]*?);;([\s\S]*?)\)/;
-  const smallRe = /\\f\{([^{}]*?)\|\|([^{}]*?)\}/;
-  const rootRe = /\\R\(([\s\S]*?)\)/; // أمر الجذر الجديد
-
-  const nodes = [];
-  let remaining = text;
-  let key = 0;
-
-  while (remaining.length){
-    const bigMatch = bigRe.exec(remaining);
-    const smallMatch = smallRe.exec(remaining);
-    const rootMatch = rootRe.exec(remaining);
-
-    let match = null;
-    let type = "";
-    let minIndex = remaining.length;
-
-    if (bigMatch && bigMatch.index < minIndex) { match = bigMatch; type = "F"; minIndex = bigMatch.index; }
-    if (smallMatch && smallMatch.index < minIndex) { match = smallMatch; type = "f"; minIndex = smallMatch.index; }
-    if (rootMatch && rootMatch.index < minIndex) { match = rootMatch; type = "R"; minIndex = rootMatch.index; }
-
-    if (!match){
-      nodes.push(<React.Fragment key={keyPrefix + "-" + key++}>{remaining}</React.Fragment>);
-      break;
-    }
-    if (match.index > 0){
-      nodes.push(<React.Fragment key={keyPrefix + "-" + key++}>{remaining.slice(0, match.index)}</React.Fragment>);
-    }
-
-    if (type === "F"){
-      nodes.push(
-        <BigFraction
-          key={keyPrefix + "-" + key++}
-          num={renderInlineMath(match[1], keyPrefix + "-bn" + key)}
-          den={renderInlineMath(match[2], keyPrefix + "-bd" + key)}
-        />
-      );
-    } else if (type === "f"){
-      // تم التحديث هنا عشان الكسر يقدر يقبل جذر جواه
-      nodes.push(<Fraction key={keyPrefix + "-" + key++} num={renderInlineMath(match[1], keyPrefix + "-fn" + key)} den={renderInlineMath(match[2], keyPrefix + "-fd" + key)} />);
-    } else if (type === "R"){
-      nodes.push(
-        <ArabicRoot key={keyPrefix + "-" + key++}>
-          {renderInlineMath(match[1], keyPrefix + "-r" + key)}
-        </ArabicRoot>
-      );
-    }
-    remaining = remaining.slice(match.index + match[0].length);
-  }
-  return nodes;
-}
-
-function renderMathText(text){
+/* ----------------------------------------------------------------
+   renderMathText
+   Splits a string on backtick (`) delimiters. Segments *inside*
+   backticks are pure math/algebra expressions and get rendered inside
+   an LTR-isolated <bdi> so the Unicode Bidi Algorithm can't reorder
+   their numbers/operators/parentheses. Segments outside backticks are
+   plain Arabic sentence text and render normally (inherit RTL).
+   ---------------------------------------------------------------- */
+function renderMathText(text) {
   if (typeof text !== "string") return text;
   const parts = text.split("`");
-  return parts.map((part, i) => {
-    // دعم الأقواس الكبيرة جداً \Big والأقواس المتوسطة \big
-    const subParts = part.split(/(\\big\(|\\big\)|\\Big\(|\\Big\))/g);
-    
-    const renderedSubParts = subParts.map((sub, j) => {
-      if (sub === '\\big(') return <span key={"bl"+j} className="text-3xl inline-block align-middle mx-0.5 font-normal" style={{ transform: "translateY(-1px)" }}>(</span>;
-      if (sub === '\\big)') return <span key={"br"+j} className="text-3xl inline-block align-middle mx-0.5 font-normal" style={{ transform: "translateY(-1px)" }}>)</span>;
-      if (sub === '\\Big(') return <span key={"Bbl"+j} className="text-5xl inline-block align-middle mx-1 font-normal" style={{ transform: "translateY(-4px)" }}>(</span>;
-      if (sub === '\\Big)') return <span key={"Bbr"+j} className="text-5xl inline-block align-middle mx-1 font-normal" style={{ transform: "translateY(-4px)" }}>)</span>;
-      return <React.Fragment key={"sub"+j}>{renderInlineMath(sub, "m" + i + "s" + j)}</React.Fragment>;
-    });
-
-    return i % 2 === 1
-      ? <bdi dir="ltr" className="math-ltr arabic-num" key={i}>{renderedSubParts}</bdi>
-      : <React.Fragment key={i}>{renderedSubParts}</React.Fragment>;
-  });
+  return parts.map((part, i) =>
+  i % 2 === 1 ? /*#__PURE__*/
+  React.createElement("bdi", { dir: "ltr", className: "math-ltr arabic-num", key: i }, part) : /*#__PURE__*/
+  React.createElement(React.Fragment, { key: i }, part)
+  );
 }
 
-function CornerMark({ position, color }){
+/* ---------------- Shell chrome: header, footer, framed card ---------------- */
+
+function CornerMark({ position, color }) {
   const styles = {
-    tl: { top: "1.1rem", insetInlineStart: "1.1rem", borderTop:`3px solid ${color}`, borderInlineStart:`3px solid ${color}`, borderStartStartRadius:"10px" },
-    tr: { top: "1.1rem", insetInlineEnd: "1.1rem", borderTop:`3px solid ${color}`, borderInlineEnd:`3px solid ${color}`, borderStartEndRadius:"10px" },
-    bl: { bottom: "1.1rem", insetInlineStart: "1.1rem", borderBottom:`3px solid ${color}`, borderInlineStart:`3px solid ${color}`, borderEndStartRadius:"10px" },
-    br: { bottom: "1.1rem", insetInlineEnd: "1.1rem", borderBottom:`3px solid ${color}`, borderInlineEnd:`3px solid ${color}`, borderEndEndRadius:"10px" },
+    tl: { top: "1.1rem", insetInlineStart: "1.1rem", borderTop: `3px solid ${color}`, borderInlineStart: `3px solid ${color}`, borderStartStartRadius: "10px" },
+    tr: { top: "1.1rem", insetInlineEnd: "1.1rem", borderTop: `3px solid ${color}`, borderInlineEnd: `3px solid ${color}`, borderStartEndRadius: "10px" },
+    bl: { bottom: "1.1rem", insetInlineStart: "1.1rem", borderBottom: `3px solid ${color}`, borderInlineStart: `3px solid ${color}`, borderEndStartRadius: "10px" },
+    br: { bottom: "1.1rem", insetInlineEnd: "1.1rem", borderBottom: `3px solid ${color}`, borderInlineEnd: `3px solid ${color}`, borderEndEndRadius: "10px" }
   };
-  return <div className="corner-mark" style={styles[position]}></div>;
+  return /*#__PURE__*/React.createElement("div", { className: "corner-mark", style: styles[position] });
 }
 
-function FramedCard({ className = "", children }){
-  return (
-    <div className={"relative bg-white/85 backdrop-blur border border-[var(--line)] rounded-[28px] shadow-[0_10px_40px_-12px_rgba(18,33,59,0.18)] " + className}>
-      <CornerMark position="tl" color="var(--teal)" />
-      <CornerMark position="tr" color="var(--rose)" />
-      <CornerMark position="bl" color="var(--rose)" />
-      <CornerMark position="br" color="var(--teal)" />
-      {children}
-    </div>
-  );
+function FramedCard({ className = "", children }) {
+  return (/*#__PURE__*/
+    React.createElement("div", { className: "relative bg-white/85 backdrop-blur border border-[var(--line)] rounded-[28px] shadow-[0_10px_40px_-12px_rgba(18,33,59,0.18)] " + className }, /*#__PURE__*/
+    React.createElement(CornerMark, { position: "tl", color: "var(--teal)" }), /*#__PURE__*/
+    React.createElement(CornerMark, { position: "tr", color: "var(--rose)" }), /*#__PURE__*/
+    React.createElement(CornerMark, { position: "bl", color: "var(--rose)" }), /*#__PURE__*/
+    React.createElement(CornerMark, { position: "br", color: "var(--teal)" }),
+    children
+    ));
+
 }
 
-function BrandLogoIcon({ size = 38 }){
-  return (
-    <div
-      className="rounded-2xl flex items-center justify-center shrink-0 shadow-sm"
-      style={{ width: size, height: size, background: "#ffffff", border: "1px solid var(--line)" }}
-    >
-      <svg width={size * 0.62} height={size * 0.62} viewBox="0 0 40 40" fill="none">
-        <path d="M20 4 A16 16 0 0 1 36 20" stroke="var(--teal)" strokeWidth="5" strokeLinecap="round" />
-        <path d="M20 36 A16 16 0 0 1 4 20" stroke="var(--rose)" strokeWidth="5" strokeLinecap="round" />
-        <path d="M20 4 A16 16 0 0 0 4 20" stroke="var(--rose)" strokeWidth="5" strokeLinecap="round" opacity="0.3" />
-        <path d="M20 36 A16 16 0 0 0 36 20" stroke="var(--teal)" strokeWidth="5" strokeLinecap="round" opacity="0.3" />
-        <circle cx="20" cy="4" r="3.2" fill="var(--rose)" />
-      </svg>
-    </div>
-  );
+/* ----------------------------------------------------------------
+   Original brand identity
+   ------------------------------------------------------------
+   An abstract two-arc "swirl" mark drawn from scratch — not a copy
+   of any existing company's logo — rendered in the app's own
+   rose/teal palette, paired with a split-tone Arabic wordmark.
+   Fully custom, yours to edit or rename freely.
+   ---------------------------------------------------------------- */
+function BrandLogoIcon({ size = 38 }) {
+  return (/*#__PURE__*/
+    React.createElement("div", {
+      className: "rounded-2xl flex items-center justify-center shrink-0 shadow-sm",
+      style: { width: size, height: size, background: "#ffffff", border: "1px solid var(--line)" } }, /*#__PURE__*/
+
+    React.createElement("svg", { width: size * 0.62, height: size * 0.62, viewBox: "0 0 40 40", fill: "none" }, /*#__PURE__*/
+    React.createElement("path", { d: "M20 4 A16 16 0 0 1 36 20", stroke: "var(--teal)", strokeWidth: "5", strokeLinecap: "round" }), /*#__PURE__*/
+    React.createElement("path", { d: "M20 36 A16 16 0 0 1 4 20", stroke: "var(--rose)", strokeWidth: "5", strokeLinecap: "round" }), /*#__PURE__*/
+    React.createElement("path", { d: "M20 4 A16 16 0 0 0 4 20", stroke: "var(--rose)", strokeWidth: "5", strokeLinecap: "round", opacity: "0.3" }), /*#__PURE__*/
+    React.createElement("path", { d: "M20 36 A16 16 0 0 0 36 20", stroke: "var(--teal)", strokeWidth: "5", strokeLinecap: "round", opacity: "0.3" }), /*#__PURE__*/
+    React.createElement("circle", { cx: "20", cy: "4", r: "3.2", fill: "var(--rose)" })
+    )
+    ));
+
 }
 
 function BrandMark() {
-  return (
-    <div className="flex items-center gap-1.5 min-w-0">
-      <BrandLogoIcon size={26} />
+  return (/*#__PURE__*/
+    React.createElement("div", { className: "flex items-center gap-1.5 min-w-0" }, /*#__PURE__*/
+    React.createElement(BrandLogoIcon, { size: 26 }), /*#__PURE__*/
 
-      <div className="leading-tight min-w-0">
-        <p
-          className="text-[5px] sm:text-[8px] font-semibold whitespace-nowrap"
-          style={{ color: "var(--slate)" }}
-        >
-          منصة تدريب ذكية
-        </p>
+    React.createElement("div", { className: "leading-tight min-w-0" }, /*#__PURE__*/
+    React.createElement("p", {
+      className: "text-[5px] sm:text-[8px] font-semibold whitespace-nowrap",
+      style: { color: "var(--slate)" } },
+    "\u0645\u0646\u0635\u0629 \u062A\u062F\u0631\u064A\u0628 \u0630\u0643\u064A\u0629"
 
-        <p
-          className="font-display font-black text-[10px] sm:text-[20px] whitespace-nowrap"
-          style={{ lineHeight: "1.1" }}
-        >
-          <span style={{ color: "var(--rose-deep)" }}>نيوتن</span>{" "}
-          <span style={{ color: "var(--teal-deep)" }}>للقدرات</span>
-        </p>
-      </div>
-    </div>
-  );
+    ), /*#__PURE__*/
+
+    React.createElement("p", {
+      className: "font-display font-black text-[10px] sm:text-[20px] whitespace-nowrap",
+      style: { lineHeight: "1.1" } }, /*#__PURE__*/
+
+    React.createElement("span", { style: { color: "var(--rose-deep)" } }, "\u0646\u064A\u0648\u062A\u0646"), " ", /*#__PURE__*/
+    React.createElement("span", { style: { color: "var(--teal-deep)" } }, "\u0644\u0644\u0642\u062F\u0631\u0627\u062A")
+    )
+    )
+    ));
+
 }
 
-function TopHeader(){
-  return (
-    <header className="px-4 sm:px-8 pt-5 sm:pt-7">
-      <div className="max-w-4xl mx-auto grid grid-cols-3 items-center gap-2">
-        <BrandMark />
-        <div className="text-center">
-          <p className="text-[11px] sm:text-xs font-bold" style={{color:"var(--rose-deep)"}}>{QUIZ_KICKER}</p>
-          <p className="font-display font-black text-lg sm:text-2xl" style={{color:"var(--ink)"}}>{QUIZ_TITLE}</p>
-        </div>
-        <div className="justify-self-end">
-          <span className="inline-flex items-center gap-1.5 ps-3 pe-3.5 py-1.5 rounded-full text-white text-[11px] sm:text-xs font-bold shadow-sm"
-                style={{background:"var(--ink)"}}>
-            <span className="w-1.5 h-1.5 rounded-full" style={{background:"var(--rose)"}}></span>
-            قدرات كمي
-          </span>
-        </div>
-      </div>
-    </header>
-  );
+function TopHeader() {
+  return (/*#__PURE__*/
+    React.createElement("header", { className: "px-4 sm:px-8 pt-5 sm:pt-7" }, /*#__PURE__*/
+    React.createElement("div", { className: "max-w-4xl mx-auto grid grid-cols-3 items-center gap-2" }, /*#__PURE__*/
+    React.createElement(BrandMark, null), /*#__PURE__*/
+    React.createElement("div", { className: "text-center" }, /*#__PURE__*/
+    React.createElement("p", { className: "text-[11px] sm:text-xs font-bold", style: { color: "var(--rose-deep)" } }, QUIZ_KICKER), /*#__PURE__*/
+    React.createElement("p", { className: "font-display font-black text-lg sm:text-2xl", style: { color: "var(--ink)" } }, QUIZ_TITLE)
+    ), /*#__PURE__*/
+    React.createElement("div", { className: "justify-self-end" }, /*#__PURE__*/
+    React.createElement("span", { className: "inline-flex items-center gap-1.5 ps-3 pe-3.5 py-1.5 rounded-full text-white text-[11px] sm:text-xs font-bold shadow-sm",
+      style: { background: "var(--ink)" } }, /*#__PURE__*/
+    React.createElement("span", { className: "w-1.5 h-1.5 rounded-full", style: { background: "var(--rose)" } }), "\u0642\u062F\u0631\u0627\u062A \u0643\u0645\u064A"
+
+    )
+    )
+    )
+    ));
+
 }
 
-function IconButton({ children }){
-  return (
-    <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 border transition-colors hover:bg-white"
-         style={{borderColor:"var(--line)", color:"var(--teal-deep)", background:"rgba(255,255,255,.6)"}}>
-      {children}
-    </div>
-  );
+function IconButton({ children }) {
+  return (/*#__PURE__*/
+    React.createElement("div", { className: "w-9 h-9 rounded-full flex items-center justify-center shrink-0 border transition-colors hover:bg-white",
+      style: { borderColor: "var(--line)", color: "var(--teal-deep)", background: "rgba(255,255,255,.6)" } },
+    children
+    ));
+
 }
 
-function FooterBar(){
-  return (
-    <footer className="px-4 sm:px-8 pb-6 pt-4 mt-auto">
-      <div className="max-w-4xl mx-auto">
-        <div className="rounded-2xl border shadow-sm px-4 sm:px-5 py-3 flex items-center justify-between gap-3 flex-wrap"
-             style={{background:"rgba(255,255,255,.72)", backdropFilter:"blur(8px)", borderColor:"var(--line)"}}>
+function FooterBar() {
+  return (/*#__PURE__*/
+    React.createElement("footer", { className: "px-4 sm:px-8 pb-6 pt-4 mt-auto" }, /*#__PURE__*/
+    React.createElement("div", { className: "max-w-4xl mx-auto" }, /*#__PURE__*/
+    React.createElement("div", { className: "rounded-2xl border shadow-sm px-4 sm:px-5 py-3 flex items-center justify-between gap-3 flex-wrap",
+      style: { background: "rgba(255,255,255,.72)", backdropFilter: "blur(8px)", borderColor: "var(--line)" } }, /*#__PURE__*/
 
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{background:"var(--paper-2)", color:"var(--teal-deep)"}}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 14v-2a9 9 0 0 1 18 0v2"/>
-                <path d="M21 14a2 2 0 0 1-2 2h-1v-5h1a2 2 0 0 1 2 2z"/>
-                <path d="M3 14a2 2 0 0 0 2 2h1v-5H5a2 2 0 0 0-2 2z"/>
-              </svg>
-            </div>
-            <div className="leading-tight">
-              <p className="text-xs font-bold" style={{color:"var(--ink)"}}>دعمك يهمنا</p>
-              <p className="text-[11px]" style={{color:"var(--slate)"}}>نحن هنا لمساعدتك</p>
-            </div>
-          </div>
+    React.createElement("div", { className: "flex items-center gap-3" }, /*#__PURE__*/
+    React.createElement("div", { className: "w-10 h-10 rounded-full flex items-center justify-center shrink-0", style: { background: "var(--paper-2)", color: "var(--teal-deep)" } }, /*#__PURE__*/
+    React.createElement("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }, /*#__PURE__*/
+    React.createElement("path", { d: "M3 14v-2a9 9 0 0 1 18 0v2" }), /*#__PURE__*/
+    React.createElement("path", { d: "M21 14a2 2 0 0 1-2 2h-1v-5h1a2 2 0 0 1 2 2z" }), /*#__PURE__*/
+    React.createElement("path", { d: "M3 14a2 2 0 0 0 2 2h1v-5H5a2 2 0 0 0-2 2z" })
+    )
+    ), /*#__PURE__*/
+    React.createElement("div", { className: "leading-tight" }, /*#__PURE__*/
+    React.createElement("p", { className: "text-xs font-bold", style: { color: "var(--ink)" } }, "\u062F\u0639\u0645\u0643 \u064A\u0647\u0645\u0646\u0627"), /*#__PURE__*/
+    React.createElement("p", { className: "text-[11px]", style: { color: "var(--slate)" } }, "\u0646\u062D\u0646 \u0647\u0646\u0627 \u0644\u0645\u0633\u0627\u0639\u062F\u062A\u0643")
+    )
+    ), /*#__PURE__*/
 
-          <IconButton>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/>
-            </svg>
-          </IconButton>
+    React.createElement(IconButton, null, /*#__PURE__*/
+    React.createElement("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }, /*#__PURE__*/
+    React.createElement("circle", { cx: "12", cy: "8", r: "4" }), /*#__PURE__*/React.createElement("path", { d: "M4 21v-1a7 7 0 0 1 14 0v1" })
+    )
+    ), /*#__PURE__*/
 
-          <div className="flex items-center gap-2.5">
-            <span className="text-xs font-bold hidden sm:inline" style={{color:"var(--slate)"}}>تابعونا</span>
-            <div className="flex items-center gap-2">
-              <IconButton>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 20l1-5.4A8.5 8.5 0 1 1 21 11.5z"/>
-                </svg>
-              </IconButton>
-              <IconButton>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="3.5"/><circle cx="17.2" cy="6.8" r="0.6" fill="currentColor" stroke="none"/>
-                </svg>
-              </IconButton>
-              <IconButton>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="6 3 20 12 6 21 6 3"/>
-                </svg>
-              </IconButton>
-              <IconButton>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 6.5a3.5 3.5 0 0 0-3.5-3.5c-1.4 0-2.6.8-3.2 2A3.9 3.9 0 0 0 9.5 3 3.5 3.5 0 0 0 6 6.5c0 5 6.5 9 6.5 9s7.5-4 7.5-9z"/>
-                </svg>
-              </IconButton>
-            </div>
-          </div>
-        </div>
-      </div>
-    </footer>
-  );
+    React.createElement("div", { className: "flex items-center gap-2.5" }, /*#__PURE__*/
+    React.createElement("span", { className: "text-xs font-bold hidden sm:inline", style: { color: "var(--slate)" } }, "\u062A\u0627\u0628\u0639\u0648\u0646\u0627"), /*#__PURE__*/
+    React.createElement("div", { className: "flex items-center gap-2" }, /*#__PURE__*/
+    React.createElement(IconButton, null, /*#__PURE__*/
+    React.createElement("svg", { width: "14", height: "14", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }, /*#__PURE__*/
+    React.createElement("path", { d: "M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 20l1-5.4A8.5 8.5 0 1 1 21 11.5z" })
+    )
+    ), /*#__PURE__*/
+    React.createElement(IconButton, null, /*#__PURE__*/
+    React.createElement("svg", { width: "14", height: "14", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }, /*#__PURE__*/
+    React.createElement("rect", { x: "3", y: "3", width: "18", height: "18", rx: "5" }), /*#__PURE__*/React.createElement("circle", { cx: "12", cy: "12", r: "3.5" }), /*#__PURE__*/React.createElement("circle", { cx: "17.2", cy: "6.8", r: "0.6", fill: "currentColor", stroke: "none" })
+    )
+    ), /*#__PURE__*/
+    React.createElement(IconButton, null, /*#__PURE__*/
+    React.createElement("svg", { width: "14", height: "14", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }, /*#__PURE__*/
+    React.createElement("polygon", { points: "6 3 20 12 6 21 6 3" })
+    )
+    ), /*#__PURE__*/
+    React.createElement(IconButton, null, /*#__PURE__*/
+    React.createElement("svg", { width: "14", height: "14", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }, /*#__PURE__*/
+    React.createElement("path", { d: "M20 6.5a3.5 3.5 0 0 0-3.5-3.5c-1.4 0-2.6.8-3.2 2A3.9 3.9 0 0 0 9.5 3 3.5 3.5 0 0 0 6 6.5c0 5 6.5 9 6.5 9s7.5-4 7.5-9z" })
+    )
+    )
+    )
+    )
+    )
+    )
+    ));
+
 }
 
-function AppShell({ children }){
-  return (
-    <div className="min-h-screen relative overflow-hidden flex flex-col">
-      <div className="shell-blob w-80 h-80 sm:w-96 sm:h-96" style={{top:"-6rem", insetInlineEnd:"-6rem", background:"rgba(224,87,124,.28)"}}></div>
-      <div className="shell-blob w-80 h-80 sm:w-[26rem] sm:h-[26rem]" style={{bottom:"-8rem", insetInlineStart:"-6rem", background:"rgba(31,122,140,.22)"}}></div>
-      <div className="relative z-10 flex flex-col min-h-screen">
-        <TopHeader />
-        <main className="flex-1 px-4 sm:px-8 py-6 sm:py-8">
-          {children}
-        </main>
-        <FooterBar />
-      </div>
-    </div>
-  );
+function AppShell({ children }) {
+  return (/*#__PURE__*/
+    React.createElement("div", { className: "min-h-screen relative overflow-hidden flex flex-col" }, /*#__PURE__*/
+    React.createElement("div", { className: "shell-blob w-80 h-80 sm:w-96 sm:h-96", style: { top: "-6rem", insetInlineEnd: "-6rem", background: "rgba(224,87,124,.28)" } }), /*#__PURE__*/
+    React.createElement("div", { className: "shell-blob w-80 h-80 sm:w-[26rem] sm:h-[26rem]", style: { bottom: "-8rem", insetInlineStart: "-6rem", background: "rgba(31,122,140,.22)" } }), /*#__PURE__*/
+    React.createElement("div", { className: "relative z-10 flex flex-col min-h-screen" }, /*#__PURE__*/
+    React.createElement(TopHeader, null), /*#__PURE__*/
+    React.createElement("main", { className: "flex-1 px-4 sm:px-8 py-6 sm:py-8" },
+    children
+    ), /*#__PURE__*/
+    React.createElement(FooterBar, null)
+    )
+    ));
+
 }
 
-function StartScreen({ onStart }){
-  return (
-    <div className="flex items-start sm:items-center justify-center">
-      <div className="max-w-xl w-full fade-in">
-        <FramedCard className="p-8 sm:p-10">
-          <h1 className="font-display font-black text-3xl sm:text-4xl leading-tight mb-2" style={{color:"var(--ink)"}}>
-            {QUIZ_KICKER}
-          </h1>
-          <p className="text-[var(--slate)] mb-8 font-bold">{QUIZ_SUBTITLE}</p>
+/* ---------------- Screens ---------------- */
 
-          <div className="grid grid-cols-3 gap-3 mb-8">
-            <div className="rounded-xl border border-[var(--line)] py-4 text-center">
-              <p className="font-display font-black text-2xl arabic-num" style={{color:"var(--rose-deep)"}}>{toArabicDigits(QUESTIONS.length)}</p>
-              <p className="text-xs text-[var(--slate)] font-bold mt-1">سؤال</p>
-            </div>
-            <div className="rounded-xl border border-[var(--line)] py-4 text-center">
-              <p className="font-display font-black text-2xl arabic-num" style={{color:"var(--rose-deep)"}}>{toArabicDigits(QUESTIONS.length)}</p>
-              <p className="text-xs text-[var(--slate)] font-bold mt-1">دقيقة</p>
-            </div>
-            <div className="rounded-xl border border-[var(--line)] py-4 text-center">
-              <p className="font-display font-black text-2xl arabic-num" style={{color:"var(--rose-deep)"}}>{toArabicDigits(4)}</p>
-              <p className="text-xs text-[var(--slate)] font-bold mt-1">خيارات لكل سؤال</p>
-            </div>
-          </div>
+function StartScreen({ onStart }) {
+  return (/*#__PURE__*/
+    React.createElement("div", { className: "flex items-start sm:items-center justify-center" }, /*#__PURE__*/
+    React.createElement("div", { className: "max-w-xl w-full fade-in" }, /*#__PURE__*/
+    React.createElement(FramedCard, { className: "p-8 sm:p-10" }, /*#__PURE__*/
+    React.createElement("h1", { className: "font-display font-black text-3xl sm:text-4xl leading-tight mb-2", style: { color: "var(--ink)" } },
+    QUIZ_KICKER
+    ), /*#__PURE__*/
+    React.createElement("p", { className: "text-[var(--slate)] mb-8" }, QUIZ_SUBTITLE), /*#__PURE__*/
 
-          <ul className="space-y-2 mb-9 text-sm text-[var(--slate)] font-semibold">
-            <li className="flex gap-2"><span style={{color:"var(--teal-deep)"}}>—</span> يمكنك التنقل بين الأسئلة والعودة لمراجعتها قبل التسليم.</li>
-            <li className="flex gap-2"><span style={{color:"var(--teal-deep)"}}>—</span> ينتهي الاختبار تلقائيًا عند انتهاء الوقت المحدد.</li>
-            <li className="flex gap-2"><span style={{color:"var(--teal-deep)"}}>—</span> ستحصل على مراجعة كاملة للإجابات في نهاية الاختبار.</li>
-          </ul>
+    React.createElement("div", { className: "grid grid-cols-3 gap-3 mb-8" }, /*#__PURE__*/
+    React.createElement("div", { className: "rounded-xl border border-[var(--line)] py-4 text-center" }, /*#__PURE__*/
+    React.createElement("p", { className: "font-display font-black text-2xl arabic-num", style: { color: "var(--rose-deep)" } }, toArabicDigits(QUESTIONS.length)), /*#__PURE__*/
+    React.createElement("p", { className: "text-xs text-[var(--slate)] mt-1" }, "\u0633\u0624\u0627\u0644")
+    ), /*#__PURE__*/
+    React.createElement("div", { className: "rounded-xl border border-[var(--line)] py-4 text-center" }, /*#__PURE__*/
+    React.createElement("p", { className: "font-display font-black text-2xl arabic-num", style: { color: "var(--rose-deep)" } }, toArabicDigits(QUESTIONS.length)), /*#__PURE__*/
+    React.createElement("p", { className: "text-xs text-[var(--slate)] mt-1" }, "\u062F\u0642\u064A\u0642\u0629")
+    ), /*#__PURE__*/
+    React.createElement("div", { className: "rounded-xl border border-[var(--line)] py-4 text-center" }, /*#__PURE__*/
+    React.createElement("p", { className: "font-display font-black text-2xl arabic-num", style: { color: "var(--rose-deep)" } }, toArabicDigits(4)), /*#__PURE__*/
+    React.createElement("p", { className: "text-xs text-[var(--slate)] mt-1" }, "\u062E\u064A\u0627\u0631\u0627\u062A \u0644\u0643\u0644 \u0633\u0624\u0627\u0644")
+    )
+    ), /*#__PURE__*/
 
-          <button
-            onClick={onStart}
-            className="w-full py-4 rounded-xl font-display font-bold text-white text-lg shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5"
-            style={{background:"linear-gradient(135deg, var(--teal), var(--teal-deep))"}}
-          >
-            ابدأ الاختبار
-          </button>
-        </FramedCard>
-      </div>
-    </div>
-  );
+    React.createElement("ul", { className: "space-y-2 mb-9 text-sm text-[var(--slate)]" }, /*#__PURE__*/
+    React.createElement("li", { className: "flex gap-2" }, /*#__PURE__*/React.createElement("span", { style: { color: "var(--teal-deep)" } }, "\u2014"), " \u064A\u0645\u0643\u0646\u0643 \u0627\u0644\u062A\u0646\u0642\u0644 \u0628\u064A\u0646 \u0627\u0644\u0623\u0633\u0626\u0644\u0629 \u0648\u0627\u0644\u0639\u0648\u062F\u0629 \u0644\u0645\u0631\u0627\u062C\u0639\u062A\u0647\u0627 \u0642\u0628\u0644 \u0627\u0644\u062A\u0633\u0644\u064A\u0645."), /*#__PURE__*/
+    React.createElement("li", { className: "flex gap-2" }, /*#__PURE__*/React.createElement("span", { style: { color: "var(--teal-deep)" } }, "\u2014"), " \u064A\u0646\u062A\u0647\u064A \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u064B\u0627 \u0639\u0646\u062F \u0627\u0646\u062A\u0647\u0627\u0621 \u0627\u0644\u0648\u0642\u062A \u0627\u0644\u0645\u062D\u062F\u062F."), /*#__PURE__*/
+    React.createElement("li", { className: "flex gap-2" }, /*#__PURE__*/React.createElement("span", { style: { color: "var(--teal-deep)" } }, "\u2014"), " \u0633\u062A\u062D\u0635\u0644 \u0639\u0644\u0649 \u0645\u0631\u0627\u062C\u0639\u0629 \u0643\u0627\u0645\u0644\u0629 \u0644\u0644\u0625\u062C\u0627\u0628\u0627\u062A \u0641\u064A \u0646\u0647\u0627\u064A\u0629 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631.")
+    ), /*#__PURE__*/
+
+    React.createElement("button", {
+      onClick: onStart,
+      className: "w-full py-4 rounded-xl font-display font-bold text-white text-lg shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5",
+      style: { background: "linear-gradient(135deg, var(--teal), var(--teal-deep))" } },
+    "\u0627\u0628\u062F\u0623 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631"
+
+    )
+    )
+    )
+    ));
+
 }
 
-function ProgressBar({ current, total }){
-  const pct = ((current+1)/total)*100;
-  return (
-    <div className="w-full h-2 rounded-full bg-[var(--paper-2)] overflow-hidden border border-[var(--line)]">
-      <div className="h-full rounded-full transition-all duration-500" style={{width:`${pct}%`, background:"linear-gradient(90deg, var(--rose), var(--brass))"}}></div>
-    </div>
-  );
+function ProgressBar({ current, total }) {
+  const pct = (current + 1) / total * 100;
+  return (/*#__PURE__*/
+    React.createElement("div", { className: "w-full h-2 rounded-full bg-[var(--paper-2)] overflow-hidden border border-[var(--line)]" }, /*#__PURE__*/
+    React.createElement("div", { className: "h-full rounded-full transition-all duration-500", style: { width: `${pct}%`, background: "linear-gradient(90deg, var(--rose), var(--brass))" } })
+    ));
+
 }
 
-function TimerRing({ secondsLeft, total }){
-  const pct = Math.max(0, secondsLeft/total);
+function TimerRing({ secondsLeft, total }) {
+  const pct = Math.max(0, secondsLeft / total);
   const low = secondsLeft <= 60;
   const r = 26;
-  const c = 2*Math.PI*r;
-  return (
-    <div className="relative w-16 h-16 shrink-0">
-      <svg viewBox="0 0 64 64" className="w-16 h-16 -rotate-90">
-        <circle cx="32" cy="32" r={r} fill="none" stroke="var(--paper-2)" strokeWidth="6"/>
-        <circle cx="32" cy="32" r={r} fill="none"
-          stroke={low ? "var(--bad)" : "var(--teal-deep)"} strokeWidth="6" strokeLinecap="round"
-          strokeDasharray={c} strokeDashoffset={c*(1-pct)} className="tick"/>
-      </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <span className={"text-[11px] font-bold arabic-num " + (low ? "text-[var(--bad)]" : "text-[var(--ink)]")}>
-          {formatTime(secondsLeft)}
-        </span>
-      </div>
-    </div>
-  );
+  const c = 2 * Math.PI * r;
+  return (/*#__PURE__*/
+    React.createElement("div", { className: "relative w-16 h-16 shrink-0" }, /*#__PURE__*/
+    React.createElement("svg", { viewBox: "0 0 64 64", className: "w-16 h-16 -rotate-90" }, /*#__PURE__*/
+    React.createElement("circle", { cx: "32", cy: "32", r: r, fill: "none", stroke: "var(--paper-2)", strokeWidth: "6" }), /*#__PURE__*/
+    React.createElement("circle", { cx: "32", cy: "32", r: r, fill: "none",
+      stroke: low ? "var(--bad)" : "var(--teal-deep)", strokeWidth: "6", strokeLinecap: "round",
+      strokeDasharray: c, strokeDashoffset: c * (1 - pct), className: "tick" })
+    ), /*#__PURE__*/
+    React.createElement("div", { className: "absolute inset-0 flex items-center justify-center" }, /*#__PURE__*/
+    React.createElement("span", { className: "text-[11px] font-bold arabic-num " + (low ? "text-[var(--bad)]" : "text-[var(--ink)]") },
+    formatTime(secondsLeft)
+    )
+    )
+    ));
+
 }
 
-function QuestionNav({ questions, answers, currentIndex, onJump }){
-  return (
-    <div className="grid grid-cols-10 sm:grid-cols-10 gap-2 max-h-40 overflow-y-auto scrollbar-thin pe-1">
-      {questions.map((_, i) => {
-        const answered = answers[i] !== undefined && answers[i] !== null;
-        const isCurrent = i === currentIndex;
-        return (
-          <button
-            key={i}
-            onClick={() => onJump(i)}
-            className={
-              "aspect-square rounded-lg text-xs font-bold flex items-center justify-center border transition-all arabic-num " +
-              (isCurrent
-                ? "text-white border-transparent"
-                : answered
-                  ? "border-transparent"
-                  : "border-[var(--line)] text-[var(--slate)] bg-white/60")
-            }
-            style={
-              isCurrent
-                ? { background:"var(--teal-deep)" }
-                : answered
-                  ? { background:"var(--paper-2)", color:"var(--rose-deep)" }
-                  : {}
-            }
-          >
-            {toArabicDigits(i+1)}
-          </button>
-        );
-      })}
-    </div>
-  );
+function QuestionNav({ questions, answers, currentIndex, onJump }) {
+  return (/*#__PURE__*/
+    React.createElement("div", { className: "grid grid-cols-10 sm:grid-cols-10 gap-2 max-h-40 overflow-y-auto scrollbar-thin pe-1" },
+    questions.map((_, i) => {
+      const answered = answers[i] !== undefined && answers[i] !== null;
+      const isCurrent = i === currentIndex;
+      return (/*#__PURE__*/
+        React.createElement("button", {
+          key: i,
+          onClick: () => onJump(i),
+          className:
+          "aspect-square rounded-lg text-xs font-bold flex items-center justify-center border transition-all arabic-num " + (
+          isCurrent ?
+          "text-white border-transparent" :
+          answered ?
+          "border-transparent" :
+          "border-[var(--line)] text-[var(--slate)] bg-white/60"),
+
+          style:
+          isCurrent ?
+          { background: "var(--teal-deep)" } :
+          answered ?
+          { background: "var(--paper-2)", color: "var(--rose-deep)" } :
+          {} },
+
+
+        toArabicDigits(i + 1)
+        ));
+
+    })
+    ));
+
 }
 
-function QuizScreen({ onFinish }){
+function QuizScreen({ onFinish }) {
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [secondsLeft, setSecondsLeft] = useState(TOTAL_TIME);
@@ -611,8 +678,8 @@ function QuizScreen({ onFinish }){
 
   useEffect(() => {
     timerRef.current = setInterval(() => {
-      setSecondsLeft(prev => {
-        if (prev <= 1){
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
           clearInterval(timerRef.current);
           return 0;
         }
@@ -623,263 +690,266 @@ function QuizScreen({ onFinish }){
   }, []);
 
   useEffect(() => {
-    if (secondsLeft === 0){
+    if (secondsLeft === 0) {
       onFinish(answers);
     }
   }, [secondsLeft]);
 
   const current = QUESTIONS[index];
   const selected = answers[index];
-  const isCompare = current.layout === "compare";
 
-  function selectOption(optIdx){
-    setAnswers(prev => ({...prev, [index]: optIdx}));
+  function selectOption(optIdx) {
+    setAnswers((prev) => ({ ...prev, [index]: optIdx }));
   }
 
-  function goNext(){
-    if (index < QUESTIONS.length - 1){
-      setIndex(index+1);
+  function goNext() {
+    if (index < QUESTIONS.length - 1) {
+      setIndex(index + 1);
     } else {
       clearInterval(timerRef.current);
       onFinish(answers);
     }
   }
 
-  function goPrev(){
-    if (index > 0) setIndex(index-1);
+  function goPrev() {
+    if (index > 0) setIndex(index - 1);
   }
 
   const answeredCount = Object.keys(answers).length;
 
-  return (
-    <div className="max-w-3xl mx-auto">
+  return (/*#__PURE__*/
+    React.createElement("div", { className: "max-w-3xl mx-auto" }, /*#__PURE__*/
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <p className="font-display font-bold text-lg" style={{color:"var(--ink)"}}>{QUIZ_SUBTITLE}</p>
-          <p className="text-xs font-bold text-[var(--slate)] arabic-num">
-            تم الإجابة عن {toArabicDigits(answeredCount)} من {toArabicDigits(QUESTIONS.length)}
-          </p>
-        </div>
-        <TimerRing secondsLeft={secondsLeft} total={TOTAL_TIME} />
-      </div>
 
-      <div className="mb-6">
-        <ProgressBar current={index} total={QUESTIONS.length} />
-      </div>
+    React.createElement("div", { className: "flex items-center justify-between mb-5" }, /*#__PURE__*/
+    React.createElement("div", null, /*#__PURE__*/
+    React.createElement("p", { className: "font-display font-bold text-lg", style: { color: "var(--ink)" } }, QUIZ_SUBTITLE), /*#__PURE__*/
+    React.createElement("p", { className: "text-xs text-[var(--slate)] arabic-num" }, "\u062A\u0645 \u0627\u0644\u0625\u062C\u0627\u0628\u0629 \u0639\u0646 ",
+    toArabicDigits(answeredCount), " \u0645\u0646 ", toArabicDigits(QUESTIONS.length)
+    )
+    ), /*#__PURE__*/
+    React.createElement(TimerRing, { secondsLeft: secondsLeft, total: TOTAL_TIME })
+    ), /*#__PURE__*/
 
-      {/* Question card */}
-      <FramedCard key={index} className="fade-in p-6 sm:p-8 mb-5">
-        <div className="flex items-start gap-3 mb-6">
-          <span className="font-display font-black text-sm w-8 h-8 rounded-full flex items-center justify-center text-white shrink-0 arabic-num"
-                style={{background:"linear-gradient(135deg, var(--rose), var(--rose-deep))"}}>
-            {toArabicDigits(index+1)}
-          </span>
-          <p className="font-display font-black text-xl sm:text-2xl leading-loose whitespace-pre-line" style={{color:"var(--ink)"}}>
-            {renderMathText(current.q)}
-          </p>
-        </div>
+    React.createElement("div", { className: "mb-6" }, /*#__PURE__*/
+    React.createElement(ProgressBar, { current: index, total: QUESTIONS.length })
+    ), /*#__PURE__*/
 
-        <div className={"grid gap-3 " + (isCompare ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-2 sm:grid-cols-4")}>
-          {current.options.map((opt, i) => {
-            const isSelected = selected === i;
-            return (
-              <button
-                key={i}
-                onClick={() => selectOption(i)}
-                className={
-                  "opt-btn flex items-center gap-2 w-full px-3 py-3.5 rounded-xl border-2 " +
-                  (isCompare ? "justify-start text-right" : "justify-center text-center") + " " +
-                  (isSelected ? "shadow-sm" : "border-[var(--line)] bg-white hover:border-[var(--teal)]")
-                }
-                style={isSelected ? { borderColor:"var(--teal-deep)", background:"var(--paper-2)" } : {}}
-              >
-                <span
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border-2"
-                  style={isSelected
-                    ? { background:"var(--teal-deep)", color:"#fff", borderColor:"var(--teal-deep)" }
-                    : { borderColor:"var(--line)", color:"var(--slate)" }}
-                >
-                  {["أ","ب","ج","د"][i]}
-                </span>
-                <span className="text-[17px] font-bold arabic-num" style={{color:"var(--ink)"}}>{renderMathText(opt)}</span>
-              </button>
-            );
-          })}
-        </div>
-      </FramedCard>
 
-      {/* Question map */}
-      <div className="bg-white/60 border border-[var(--line)] rounded-2xl p-4 mb-5">
-        <QuestionNav questions={QUESTIONS} answers={answers} currentIndex={index} onJump={setIndex} />
-      </div>
+    React.createElement(FramedCard, { key: index, className: "fade-in p-6 sm:p-8 mb-5" }, /*#__PURE__*/
+    React.createElement("div", { className: "flex items-start gap-3 mb-6" }, /*#__PURE__*/
+    React.createElement("span", { className: "font-display font-black text-sm w-8 h-8 rounded-full flex items-center justify-center text-white shrink-0 arabic-num",
+      style: { background: "linear-gradient(135deg, var(--rose), var(--rose-deep))" } },
+    toArabicDigits(index + 1)
+    ), /*#__PURE__*/
+    React.createElement("p", { className: "font-display font-bold text-lg sm:text-xl leading-relaxed whitespace-pre-line", style: { color: "var(--ink)" } },
+    renderMathText(current.q)
+    )
+    ), /*#__PURE__*/
 
-      {/* Controls */}
-      <div className="flex items-center justify-between gap-3">
-        <button
-          onClick={goPrev}
-          disabled={index===0}
-          className="px-5 py-3 rounded-xl font-bold border border-[var(--line)] bg-white/70 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white transition-all"
-          style={{color:"var(--slate)"}}
-        >
-          السابق
-        </button>
+    React.createElement("div", { className: "grid gap-3" },
+    current.options.map((opt, i) => {
+      const isSelected = selected === i;
+      return (/*#__PURE__*/
+        React.createElement("button", {
+          key: i,
+          onClick: () => selectOption(i),
+          className:
+          "opt-btn text-right rtl:text-right flex items-center gap-3 w-full px-4 py-3.5 rounded-xl border-2 " + (
+          isSelected ? "shadow-sm" : "border-[var(--line)] bg-white hover:border-[var(--teal)]"),
 
-        {index === QUESTIONS.length - 1 ? (
-          <button
-            onClick={() => onFinish(answers)}
-            className="px-8 py-3 rounded-xl font-display font-bold text-white shadow-sm hover:-translate-y-0.5 transition-all"
-            style={{background:"var(--good)"}}
-          >
-            تسليم الاختبار
-          </button>
-        ) : (
-          <button
-            onClick={goNext}
-            className="px-8 py-3 rounded-xl font-display font-bold text-white shadow-sm hover:-translate-y-0.5 transition-all"
-            style={{background:"linear-gradient(135deg, var(--teal), var(--teal-deep))"}}
-          >
-            التالي
-          </button>
-        )}
-      </div>
-    </div>
-  );
+          style: isSelected ? { borderColor: "var(--teal-deep)", background: "var(--paper-2)" } : {} }, /*#__PURE__*/
+
+        React.createElement("span", {
+          className: "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border-2",
+          style: isSelected ?
+          { background: "var(--teal-deep)", color: "#fff", borderColor: "var(--teal-deep)" } :
+          { borderColor: "var(--line)", color: "var(--slate)" } },
+
+        ["أ", "ب", "ج", "د"][i]
+        ), /*#__PURE__*/
+        React.createElement("span", { className: "text-[15px] arabic-num", style: { color: "var(--ink)" } }, renderMathText(opt))
+        ));
+
+    })
+    )
+    ), /*#__PURE__*/
+
+
+    React.createElement("div", { className: "bg-white/60 border border-[var(--line)] rounded-2xl p-4 mb-5" }, /*#__PURE__*/
+    React.createElement(QuestionNav, { questions: QUESTIONS, answers: answers, currentIndex: index, onJump: setIndex })
+    ), /*#__PURE__*/
+
+
+    React.createElement("div", { className: "flex items-center justify-between gap-3" }, /*#__PURE__*/
+    React.createElement("button", {
+      onClick: goPrev,
+      disabled: index === 0,
+      className: "px-5 py-3 rounded-xl font-bold border border-[var(--line)] bg-white/70 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white transition-all",
+      style: { color: "var(--slate)" } },
+    "\u0627\u0644\u0633\u0627\u0628\u0642"
+
+    ),
+
+    index === QUESTIONS.length - 1 ? /*#__PURE__*/
+    React.createElement("button", {
+      onClick: () => onFinish(answers),
+      className: "px-8 py-3 rounded-xl font-display font-bold text-white shadow-sm hover:-translate-y-0.5 transition-all",
+      style: { background: "var(--good)" } },
+    "\u062A\u0633\u0644\u064A\u0645 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631"
+
+    ) : /*#__PURE__*/
+
+    React.createElement("button", {
+      onClick: goNext,
+      className: "px-8 py-3 rounded-xl font-display font-bold text-white shadow-sm hover:-translate-y-0.5 transition-all",
+      style: { background: "linear-gradient(135deg, var(--teal), var(--teal-deep))" } },
+    "\u0627\u0644\u062A\u0627\u0644\u064A"
+
+    )
+
+    )
+    ));
+
 }
 
-function ResultsScreen({ answers, onRestart }){
+function ResultsScreen({ answers, onRestart }) {
   const [reviewOpen, setReviewOpen] = useState(false);
 
   const { correct, wrong, unanswered, score } = useMemo(() => {
-    let correct = 0, wrong = 0, unanswered = 0;
+    let correct = 0,wrong = 0,unanswered = 0;
     QUESTIONS.forEach((q, i) => {
-      if (answers[i] === undefined || answers[i] === null) unanswered++;
-      else if (answers[i] === q.correctIndex) correct++;
-      else wrong++;
+      if (answers[i] === undefined || answers[i] === null) unanswered++;else
+      if (answers[i] === q.correctIndex) correct++;else
+      wrong++;
     });
-    const score = Math.round((correct / QUESTIONS.length) * 100);
+    const score = Math.round(correct / QUESTIONS.length * 100);
     return { correct, wrong, unanswered, score };
   }, [answers]);
 
   const grade = score >= 85 ? "ممتاز" : score >= 70 ? "جيد جدًا" : score >= 50 ? "جيد" : "يحتاج تدريبًا إضافيًا";
   const gradeColor = score >= 70 ? "var(--good)" : score >= 50 ? "var(--brass-deep)" : "var(--bad)";
 
-  return (
-    <div className="max-w-3xl mx-auto fade-in">
+  return (/*#__PURE__*/
+    React.createElement("div", { className: "max-w-3xl mx-auto fade-in" }, /*#__PURE__*/
 
-      <FramedCard className="p-8 sm:p-10 mb-6 text-center">
-        <p className="text-sm font-semibold text-[var(--slate)] mb-2">نتيجتك النهائية</p>
-        <p className="font-display font-black text-6xl mb-2 arabic-num" style={{color:"var(--ink)"}}>
-          {toArabicDigits(score)}<span className="text-2xl">٪</span>
-        </p>
-        <p className="font-display font-bold text-lg mb-8" style={{color:gradeColor}}>{grade}</p>
+    React.createElement(FramedCard, { className: "p-8 sm:p-10 mb-6 text-center" }, /*#__PURE__*/
+    React.createElement("p", { className: "text-sm font-semibold text-[var(--slate)] mb-2" }, "\u0646\u062A\u064A\u062C\u062A\u0643 \u0627\u0644\u0646\u0647\u0627\u0626\u064A\u0629"), /*#__PURE__*/
+    React.createElement("p", { className: "font-display font-black text-6xl mb-2 arabic-num", style: { color: "var(--ink)" } },
+    toArabicDigits(score), /*#__PURE__*/React.createElement("span", { className: "text-2xl" }, "\u066A")
+    ), /*#__PURE__*/
+    React.createElement("p", { className: "font-display font-bold text-lg mb-8", style: { color: gradeColor } }, grade), /*#__PURE__*/
 
-        <div className="grid grid-cols-3 gap-3">
-          <div className="rounded-xl border border-[var(--line)] py-4">
-            <p className="font-display font-black text-2xl arabic-num" style={{color:"var(--good)"}}>{toArabicDigits(correct)}</p>
-            <p className="text-xs text-[var(--slate)] font-bold mt-1">إجابات صحيحة</p>
-          </div>
-          <div className="rounded-xl border border-[var(--line)] py-4">
-            <p className="font-display font-black text-2xl arabic-num" style={{color:"var(--bad)"}}>{toArabicDigits(wrong)}</p>
-            <p className="text-xs text-[var(--slate)] font-bold mt-1">إجابات خاطئة</p>
-          </div>
-          <div className="rounded-xl border border-[var(--line)] py-4">
-            <p className="font-display font-black text-2xl text-[var(--slate)] arabic-num">{toArabicDigits(unanswered)}</p>
-            <p className="text-xs text-[var(--slate)] font-bold mt-1">بدون إجابة</p>
-          </div>
-        </div>
-      </FramedCard>
+    React.createElement("div", { className: "grid grid-cols-3 gap-3" }, /*#__PURE__*/
+    React.createElement("div", { className: "rounded-xl border border-[var(--line)] py-4" }, /*#__PURE__*/
+    React.createElement("p", { className: "font-display font-black text-2xl arabic-num", style: { color: "var(--good)" } }, toArabicDigits(correct)), /*#__PURE__*/
+    React.createElement("p", { className: "text-xs text-[var(--slate)] mt-1" }, "\u0625\u062C\u0627\u0628\u0627\u062A \u0635\u062D\u064A\u062D\u0629")
+    ), /*#__PURE__*/
+    React.createElement("div", { className: "rounded-xl border border-[var(--line)] py-4" }, /*#__PURE__*/
+    React.createElement("p", { className: "font-display font-black text-2xl arabic-num", style: { color: "var(--bad)" } }, toArabicDigits(wrong)), /*#__PURE__*/
+    React.createElement("p", { className: "text-xs text-[var(--slate)] mt-1" }, "\u0625\u062C\u0627\u0628\u0627\u062A \u062E\u0627\u0637\u0626\u0629")
+    ), /*#__PURE__*/
+    React.createElement("div", { className: "rounded-xl border border-[var(--line)] py-4" }, /*#__PURE__*/
+    React.createElement("p", { className: "font-display font-black text-2xl text-[var(--slate)] arabic-num" }, toArabicDigits(unanswered)), /*#__PURE__*/
+    React.createElement("p", { className: "text-xs text-[var(--slate)] mt-1" }, "\u0628\u062F\u0648\u0646 \u0625\u062C\u0627\u0628\u0629")
+    )
+    )
+    ), /*#__PURE__*/
 
-      <div className="flex gap-3 mb-6">
-        <button
-          onClick={() => setReviewOpen(v => !v)}
-          className="flex-1 py-3.5 rounded-xl font-display font-bold border-2 bg-white/70 transition-all"
-          style={{borderColor:"var(--teal-deep)", color:"var(--teal-deep)"}}
-        >
-          {reviewOpen ? "إخفاء المراجعة" : "مراجعة الإجابات"}
-        </button>
-        <button
-          onClick={onRestart}
-          className="flex-1 py-3.5 rounded-xl font-display font-bold text-white transition-all hover:-translate-y-0.5"
-          style={{background:"linear-gradient(135deg, var(--teal), var(--teal-deep))"}}
-        >
-          إعادة الاختبار
-        </button>
-      </div>
+    React.createElement("div", { className: "flex gap-3 mb-6" }, /*#__PURE__*/
+    React.createElement("button", {
+      onClick: () => setReviewOpen((v) => !v),
+      className: "flex-1 py-3.5 rounded-xl font-display font-bold border-2 bg-white/70 transition-all",
+      style: { borderColor: "var(--teal-deep)", color: "var(--teal-deep)" } },
 
-      {reviewOpen && (
-        <div className="space-y-4">
-          {QUESTIONS.map((q, i) => {
-            const userAns = answers[i];
-            const isCorrect = userAns === q.correctIndex;
-            const wasAnswered = userAns !== undefined && userAns !== null;
-            return (
-              <div key={i} className="fade-in bg-white/80 border border-[var(--line)] rounded-xl p-5">
-                <div className="flex items-start gap-3 mb-4">
-                  <span
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 arabic-num"
-                    style={{background: !wasAnswered ? "var(--slate)" : isCorrect ? "var(--good)" : "var(--bad)"}}
-                  >
-                    {toArabicDigits(i+1)}
-                  </span>
-                  <p className="font-bold leading-relaxed whitespace-pre-line" style={{color:"var(--ink)"}}>
-                    {renderMathText(q.q)}
-                  </p>
-                </div>
-                <div className="grid gap-2">
-                  {q.options.map((opt, oi) => {
-                    const isRight = oi === q.correctIndex;
-                    const isPicked = oi === userAns;
-                    let style = { borderColor:"var(--line)" };
-                    if (isRight) style = { borderColor:"var(--good)", background:"#eef7f2" };
-                    else if (isPicked && !isRight) style = { borderColor:"var(--bad)", background:"#fbeeed" };
-                    return (
-                      <div key={oi} className="flex items-center gap-3 px-3.5 py-2.5 rounded-lg border" style={style}>
-                        <span className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold border shrink-0"
-                              style={{borderColor:"var(--line)", color:"var(--slate)"}}>
-                          {["أ","ب","ج","د"][oi]}
-                        </span>
-                        <span className="text-[15px] font-bold arabic-num" style={{color:"var(--ink)"}}>{renderMathText(opt)}</span>
-                        {isRight && <span className="ms-auto text-xs font-bold" style={{color:"var(--good)"}}>الإجابة الصحيحة</span>}
-                        {isPicked && !isRight && <span className="ms-auto text-xs font-bold" style={{color:"var(--bad)"}}>اخترتها</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+    reviewOpen ? "إخفاء المراجعة" : "مراجعة الإجابات"
+    ), /*#__PURE__*/
+    React.createElement("button", {
+      onClick: onRestart,
+      className: "flex-1 py-3.5 rounded-xl font-display font-bold text-white transition-all hover:-translate-y-0.5",
+      style: { background: "linear-gradient(135deg, var(--teal), var(--teal-deep))" } },
+    "\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631"
+
+    )
+    ),
+
+    reviewOpen && /*#__PURE__*/
+    React.createElement("div", { className: "space-y-4" },
+    QUESTIONS.map((q, i) => {
+      const userAns = answers[i];
+      const isCorrect = userAns === q.correctIndex;
+      const wasAnswered = userAns !== undefined && userAns !== null;
+      return (/*#__PURE__*/
+        React.createElement("div", { key: i, className: "fade-in bg-white/80 border border-[var(--line)] rounded-xl p-5" }, /*#__PURE__*/
+        React.createElement("div", { className: "flex items-start gap-3 mb-4" }, /*#__PURE__*/
+        React.createElement("span", {
+          className: "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 arabic-num",
+          style: { background: !wasAnswered ? "var(--slate)" : isCorrect ? "var(--good)" : "var(--bad)" } },
+
+        toArabicDigits(i + 1)
+        ), /*#__PURE__*/
+        React.createElement("p", { className: "font-semibold leading-relaxed whitespace-pre-line", style: { color: "var(--ink)" } },
+        renderMathText(q.q),
+        q.needsReview && /*#__PURE__*/
+        React.createElement("span", { className: "ms-2 text-[10px] font-bold px-2 py-0.5 rounded-full align-middle",
+          style: { background: "var(--paper-2)", color: "var(--rose-deep)" } }, "\u064A\u064F\u0646\u0635\u062D \u0628\u0645\u0631\u0627\u062C\u0639\u0629 \u0627\u0644\u0623\u0635\u0644"
+
+        )
+
+        )
+        ), /*#__PURE__*/
+        React.createElement("div", { className: "grid gap-2" },
+        q.options.map((opt, oi) => {
+          const isRight = oi === q.correctIndex;
+          const isPicked = oi === userAns;
+          let style = { borderColor: "var(--line)" };
+          if (isRight) style = { borderColor: "var(--good)", background: "#eef7f2" };else
+          if (isPicked && !isRight) style = { borderColor: "var(--bad)", background: "#fbeeed" };
+          return (/*#__PURE__*/
+            React.createElement("div", { key: oi, className: "flex items-center gap-3 px-3.5 py-2.5 rounded-lg border", style: style }, /*#__PURE__*/
+            React.createElement("span", { className: "w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold border shrink-0",
+              style: { borderColor: "var(--line)", color: "var(--slate)" } },
+            ["أ", "ب", "ج", "د"][oi]
+            ), /*#__PURE__*/
+            React.createElement("span", { className: "text-sm arabic-num", style: { color: "var(--ink)" } }, renderMathText(opt)),
+            isRight && /*#__PURE__*/React.createElement("span", { className: "ms-auto text-xs font-bold", style: { color: "var(--good)" } }, "\u0627\u0644\u0625\u062C\u0627\u0628\u0629 \u0627\u0644\u0635\u062D\u064A\u062D\u0629"),
+            isPicked && !isRight && /*#__PURE__*/React.createElement("span", { className: "ms-auto text-xs font-bold", style: { color: "var(--bad)" } }, "\u0627\u062E\u062A\u0631\u062A\u0647\u0627")
+            ));
+
+        })
+        )
+        ));
+
+    })
+    )
+
+    ));
+
 }
 
-function App(){
-  const [stage, setStage] = useState("start");
+function App() {
+  const [stage, setStage] = useState("start"); // start | quiz | results
   const [finalAnswers, setFinalAnswers] = useState({});
 
-  function handleStart(){ setStage("quiz"); }
-  function handleFinish(answers){
+  function handleStart() {setStage("quiz");}
+  function handleFinish(answers) {
     setFinalAnswers(answers);
     setStage("results");
   }
-  function handleRestart(){
+  function handleRestart() {
     setFinalAnswers({});
     setStage("start");
   }
 
-  return (
-    <AppShell>
-      {stage === "start" && <StartScreen onStart={handleStart} />}
-      {stage === "quiz" && <QuizScreen onFinish={handleFinish} />}
-      {stage === "results" && <ResultsScreen answers={finalAnswers} onRestart={handleRestart} />}
-    </AppShell>
-  );
+  return (/*#__PURE__*/
+    React.createElement(AppShell, null,
+    stage === "start" && /*#__PURE__*/React.createElement(StartScreen, { onStart: handleStart }),
+    stage === "quiz" && /*#__PURE__*/React.createElement(QuizScreen, { onFinish: handleFinish }),
+    stage === "results" && /*#__PURE__*/React.createElement(ResultsScreen, { answers: finalAnswers, onRestart: handleRestart })
+    ));
+
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
-</script>
+ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/React.createElement(App, null));</script>
 </body>
 </html>
