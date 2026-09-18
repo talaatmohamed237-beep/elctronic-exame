@@ -100,83 +100,83 @@ const QUESTIONS = [
     correctIndex: 2,
   },
   {
-    q: "قارن بين:\nالقيمة الأولى: `\\f{٤||٥} × ١٠٠`\nالقيمة الثانية: `\\f{١||٣} × ٢٤٠`",
+    q: "قارن بين:\nالقيمة الأولى: \\f{٤||٥} × ١٠٠\nالقيمة الثانية: \\f{١||٣} × ٢٤٠",
     options: ["القيمة الأولى أكبر", "القيمة الثانية أكبر", "القيمتان متساويتان", "المعطيات غير كافية"],
     correctIndex: 2,
     layout: "compare",
   },
   {
-    q: "قارن بين:\nالقيمة الأولى: `\\f{١||٦} − \\f{١||١٢}`\nالقيمة الثانية: `\\f{١||١٢} − \\f{١||٦}`",
+    q: "قارن بين:\nالقيمة الأولى: \\f{١||٦} - \\f{١||١٢}\nالقيمة الثانية: \\f{١||١٢} - \\f{١||٦}",
     options: ["القيمة الأولى أكبر", "القيمة الثانية أكبر", "القيمتان متساويتان", "المعطيات غير كافية"],
     correctIndex: 0,
     layout: "compare",
   },
   {
     q: "أوجد قيمة:\nنصف الثلث × ثلث الربع × ربع الخمس",
-    options: ["`\\f{١||١٤٤٠}`", "`\\f{١||٧٢٠}`", "`\\f{١||٣٦٠}`", "`\\f{١||١٨٠}`"],
+    options: ["\\f{١||١٤٤٠}", "\\f{١||٧٢٠}", "\\f{١||٣٦٠}", "\\f{١||١٨٠}"],
     correctIndex: 0,
   },
   {
     q: "تدرس هند ٣ ساعات يوميًا، ما الكسر الذي يمثل ما تدرسه هند في اليوم؟",
-    options: ["`\\f{١||٦}`", "`\\f{١||٨}`", "`\\f{١||٤}`", "`\\f{١||٢}`"],
+    options: ["\\f{١||٦}", "\\f{١||٨}", "\\f{١||٤}", "\\f{١||٢}"],
     correctIndex: 1,
   },
   {
-    q: "قارن بين:\nالقيمة الأولى: ١٥\nالقيمة الثانية: `٩٠ × \\f{١||٦}`",
+    q: "قارن بين:\nالقيمة الأولى: ١٥\nالقيمة الثانية: ٩٠ × \\f{١||٦}",
     options: ["القيمة الأولى أكبر", "القيمة الثانية أكبر", "القيمتان متساويتان", "المعطيات غير كافية"],
     correctIndex: 2,
     layout: "compare",
   },
   {
-    q: "أحسب قيمة:\n`(\\f{٢ − ١||٢ + ١}) − (\\f{٢ + ١||٢ − ١})`",
-    options: ["`− \\f{١٠||٣}`", "`− \\f{٨||٣}`", "`\\f{٨||٣}`", "`\\f{١٠||٣}`"],
+    q: "أحسب قيمة:\n\\Big( \\f{١ + ٢||١ - ٢} - \\f{١ - ٢||١ + ٢} \\Big)",
+    options: ["- \\f{١٠||٣}", "- \\f{٨||٣}", "\\f{٨||٣}", "\\f{١٠||٣}"],
     correctIndex: 1,
   },
   {
-    q: "احسب قيمة:\n`\\f{٣||٢} + (\\f{٧||٤} × \\f{١||٧}) − (\\f{٥||٤} × \\f{٢||٥}) − \\f{٧||٤}`",
-    options: ["١", "`\\f{١||٢}`", "`− \\f{١||٢}`", "`−٢`"],
+    q: "احسب قيمة:\n\\f{٣||٢} + \\big( \\f{٧||٤} × \\f{١||٧} \\big) - \\big( \\f{٥||٤} × \\f{٢||٥} \\big) - \\f{٧||٤}",
+    options: ["١", "\\f{١||٢}", "- \\f{١||٢}", "-٢"],
     correctIndex: 2,
   },
   {
-    q: "إذا كان `س = \\f{١٠٠||ص} = \\f{س||ص}`، أوجد قيمة ص",
+    q: "إذا كان س = \\f{١٠٠||ص} = \\f{س||ص} ، أوجد قيمة ص",
     options: ["١", "١٠", "٥٠", "١٠٠"],
     correctIndex: 0,
   },
   {
-    q: "إذا كان `\\F(\\f{٢||٣};;\\f{٥||٤}) = \\F(\\f{٨||١٥};;س)`، أوجد قيمة س؟",
-    options: ["`\\f{١||٤}`", "`\\f{١||٢}`", "١", "٢"],
+    q: "إذا كان \\F(\\f{٨||١٥};;س) = \\F(\\f{٢||٣};;\\f{٥||٤}) ، أوجد قيمة س؟",
+    options: ["\\f{١||٤}", "\\f{١||٢}", "١", "٢"],
     correctIndex: 2,
   },
   {
-    q: "إذا كان `س + \\f{١||س} = ٣ + \\f{١||٣}`، قارن بين:\nالقيمة الأولى: س\nالقيمة الثانية: ٢",
+    q: "إذا كان س + \\f{١||س} = ٣ + \\f{١||٣} ، قارن بين:\nالقيمة الأولى: س\nالقيمة الثانية: ٢",
     options: ["القيمة الأولى أكبر", "القيمة الثانية أكبر", "القيمتان متساويتان", "المعطيات غير كافية"],
     correctIndex: 3,
     layout: "compare",
   },
   {
-    q: "قارن بين:\nالقيمة الأولى: `\\f{١ + ٣||٥ + ٥}`\nالقيمة الثانية: `\\f{٣||٥} + \\f{٢||٥}`",
+    q: "قارن بين:\nالقيمة الأولى: \\f{٣ + ١||٥ + ٥}\nالقيمة الثانية: \\f{٣||٥} + \\f{٢||٥}",
     options: ["القيمة الأولى أكبر", "القيمة الثانية أكبر", "القيمتان متساويتان", "المعطيات غير كافية"],
     correctIndex: 1,
     layout: "compare",
   },
   {
-    q: "أحسب قيمة:\n`(\\f{٤||١٠} ÷ \\f{٣||٥}) − (\\f{٢||٨} + \\f{١||٤})`",
+    q: "أحسب قيمة:\n\\big( \\f{٤||١٠} + \\f{٣||٥} \\big) - \\big( \\f{٦||٨} + \\f{١||٤} \\big)",
     options: ["٠", "١", "٢", "٣"],
     correctIndex: 0,
   },
   {
-    q: "إذا كان `ص = \\f{١||٢} س ، ع = \\f{١||٢} ص`\nس + ص + ع = ٧ ، أوجد قيمة ع",
+    q: "إذا كان ص = \\f{١||٢} س ، ع = \\f{١||٢} ص\nس + ص + ع = ٧ ، أوجد قيمة ع",
     options: ["١", "٣", "٥", "٧"],
     correctIndex: 0,
   },
   {
-    q: "احسب قيمة:\n`\\f{١٤||١٤} × \\f{٧||٢} − ((١ − \\f{١||٢}) × ٢) − \\f{٧||٢}`",
-    options: ["١", "−١", "٢", "−٢"],
+    q: "احسب قيمة:\n\\f{١٤||١٤} × \\f{٧||٢} - \\Big( \\big( ١ - \\f{١||٢} \\big) × ٢ \\Big) - \\f{٧||٢}",
+    options: ["١", "-١", "٢", "-٢"],
     correctIndex: 1,
   },
   {
-    q: "إذا كان `أ = \\f{١||ب} ، ب = \\f{١||ج} ، ج = \\f{١||د} ، د = جذر \\f{٦٤||٤٩}`\nأوجد قيمة (أ + ج) × د",
-    options: ["`\\f{٣||٤}`", "٢", "`\\f{٧||٨}`", "٠"],
+    q: "إذا كان أ = \\f{١||ب} ، ب = \\f{١||ج} ، ج = \\f{١||د} ،  د = \\f{\\R(٦٤)||\\R(٤٩)} \nأوجد قيمة \\big( أ + ج \\big) × د",
+    options: ["\\f{٣||٤}", "٢", "\\f{٧||٨}", "٠"],
     correctIndex: 1,
   },
   {
@@ -185,28 +185,28 @@ const QUESTIONS = [
     correctIndex: 2,
   },
   {
-    q: "إذا كان `\\f{س||١٢} + \\f{ص||١٢} = \\f{٥||١٢}`، قارن بين:\nالقيمة الأولى: س + ص\nالقيمة الثانية: ٥",
+    q: "إذا كان \\f{س||١٢} + \\f{ص||١٢} = \\f{٥||١٢} ، قارن بين:\nالقيمة الأولى: س + ص\nالقيمة الثانية: ٥",
     options: ["القيمة الأولى أكبر", "القيمة الثانية أكبر", "القيمتان متساويتان", "المعطيات غير كافية"],
     correctIndex: 2,
     layout: "compare",
   },
   {
-    q: "إذا كان `م = \\f{٣١||٥٠} ، ن = \\f{٥٩||١٠٠} ، ل = \\f{٢٩٩||٥٠٠}`\nفأي الآتي ترتيبهم تصاعديًا؟",
-    options: ["ن، ل، م", "ن، م، ل", "م، ن، ل", "م، ل، ن"],
+    q: "إذا كان م = \\f{٣١||٥٠} ، ن = \\f{٥٩||١٠٠} ، ل = \\f{٢٩٩||٥٠٠}\nفأي الآتي ترتيبهم تصاعديًا؟",
+    options: ["ن ، ل ، م", "ن ، م ، ل", "م ، ن ، ل", "م ، ل ، ن"],
     correctIndex: 0,
     layout: "compare",
   },
   {
-    q: "قارن بين:\nالقيمة الأولى: `\\f{١||٢} − \\f{١||٢} ÷ \\f{١||٢}`\nالقيمة الثانية: ١",
+    q: "قارن بين:\nالقيمة الأولى: \u200F-\u200F\\f{١||٢} \u200F÷\u200F \u200F-\u200F\\f{١||٢}\nالقيمة الثانية: ١",
     options: ["القيمة الأولى أكبر", "القيمة الثانية أكبر", "القيمتان متساويتان", "المعطيات غير كافية"],
-    correctIndex: 1,
+    correctIndex: 2,
     layout: "compare",
   },
 ];
 
 const QUIZ_TITLE = "اختبار ٢";
 const QUIZ_KICKER = "اختبار القدرات الكمي";
-const QUIZ_SUBTITLE = "الكسور والنسب — ٢٠ سؤالًا";
+const QUIZ_SUBTITLE = "الكسور الاعتيادية — ٢٠ سؤالًا";
 const SECONDS_PER_QUESTION = 60;
 const TOTAL_TIME = QUESTIONS.length * SECONDS_PER_QUESTION;
 
@@ -223,18 +223,30 @@ function formatTime(sec){
 
 function Fraction({ num, den }){
   return (
-    <span className="inline-flex flex-col items-center mx-1 align-middle frac-bar font-bold" style={{verticalAlign:"middle"}}>
-      <span dir="ltr" className="px-1 pb-[1px] text-[0.95em] border-b-[2px]" style={{borderColor:"currentColor"}}>{num}</span>
-      <span dir="ltr" className="px-1 pt-[1px] text-[0.95em]">{den}</span>
+    <span className="inline-grid mx-1 align-middle frac-bar font-bold" style={{verticalAlign:"middle", gridTemplateRows:"1fr 1fr"}}>
+      <span dir="ltr" className="flex flex-col justify-end items-center px-1 pb-[1px] text-[0.95em] border-b-[2px]" style={{borderColor:"currentColor"}}>{num}</span>
+      <span dir="ltr" className="flex flex-col justify-start items-center px-1 pt-[1px] text-[0.95em]">{den}</span>
     </span>
   );
 }
 
 function BigFraction({ num, den }){
   return (
-    <span className="inline-flex flex-col items-center mx-1.5 align-middle frac-bar font-bold" style={{verticalAlign:"middle"}}>
-      <span className="px-2 pb-1 border-b-[2px]" style={{borderColor:"currentColor"}}>{num}</span>
-      <span className="px-2 pt-1">{den}</span>
+    <span className="inline-grid mx-1.5 align-middle frac-bar font-bold" style={{verticalAlign:"middle", gridTemplateRows:"1fr 1fr"}}>
+      <span className="flex flex-col justify-end items-center px-2 pb-1 border-b-[2px]" style={{borderColor:"currentColor"}}>{num}</span>
+      <span className="flex flex-col justify-start items-center px-2 pt-1">{den}</span>
+    </span>
+  );
+}
+  function ArabicRoot({ children }){
+  return (
+    <span dir="rtl" className="inline-flex items-stretch mx-0.5 align-middle" style={{ verticalAlign: "middle" }}>
+      <svg width="12" viewBox="0 0 12 24" className="shrink-0" stroke="currentColor" strokeWidth="2" fill="none" style={{ transform: "translateY(1px)" }}>
+        <path d="M11 13 L7 22 L1 2" strokeLinejoin="round" strokeLinecap="round" />
+      </svg>
+      <span className="border-t-[2px] border-current pl-1 pr-0.5 inline-flex flex-col justify-center" style={{ transform: "translateY(1px)" }}>
+        {children}
+      </span>
     </span>
   );
 }
@@ -243,6 +255,8 @@ function renderInlineMath(text, keyPrefix){
   if (typeof text !== "string") return text;
   const bigRe = /\\F\(([\s\S]*?);;([\s\S]*?)\)/;
   const smallRe = /\\f\{([^{}]*?)\|\|([^{}]*?)\}/;
+  const rootRe = /\\R\(([\s\S]*?)\)/; // أمر الجذر الجديد
+
   const nodes = [];
   let remaining = text;
   let key = 0;
@@ -250,9 +264,15 @@ function renderInlineMath(text, keyPrefix){
   while (remaining.length){
     const bigMatch = bigRe.exec(remaining);
     const smallMatch = smallRe.exec(remaining);
-    let match = null, isBig = false;
-    if (bigMatch && (!smallMatch || bigMatch.index <= smallMatch.index)){ match = bigMatch; isBig = true; }
-    else if (smallMatch){ match = smallMatch; isBig = false; }
+    const rootMatch = rootRe.exec(remaining);
+
+    let match = null;
+    let type = "";
+    let minIndex = remaining.length;
+
+    if (bigMatch && bigMatch.index < minIndex) { match = bigMatch; type = "F"; minIndex = bigMatch.index; }
+    if (smallMatch && smallMatch.index < minIndex) { match = smallMatch; type = "f"; minIndex = smallMatch.index; }
+    if (rootMatch && rootMatch.index < minIndex) { match = rootMatch; type = "R"; minIndex = rootMatch.index; }
 
     if (!match){
       nodes.push(<React.Fragment key={keyPrefix + "-" + key++}>{remaining}</React.Fragment>);
@@ -261,7 +281,8 @@ function renderInlineMath(text, keyPrefix){
     if (match.index > 0){
       nodes.push(<React.Fragment key={keyPrefix + "-" + key++}>{remaining.slice(0, match.index)}</React.Fragment>);
     }
-    if (isBig){
+
+    if (type === "F"){
       nodes.push(
         <BigFraction
           key={keyPrefix + "-" + key++}
@@ -269,8 +290,15 @@ function renderInlineMath(text, keyPrefix){
           den={renderInlineMath(match[2], keyPrefix + "-bd" + key)}
         />
       );
-    } else {
-      nodes.push(<Fraction key={keyPrefix + "-" + key++} num={match[1]} den={match[2]} />);
+    } else if (type === "f"){
+      // تم التحديث هنا عشان الكسر يقدر يقبل جذر جواه
+      nodes.push(<Fraction key={keyPrefix + "-" + key++} num={renderInlineMath(match[1], keyPrefix + "-fn" + key)} den={renderInlineMath(match[2], keyPrefix + "-fd" + key)} />);
+    } else if (type === "R"){
+      nodes.push(
+        <ArabicRoot key={keyPrefix + "-" + key++}>
+          {renderInlineMath(match[1], keyPrefix + "-r" + key)}
+        </ArabicRoot>
+      );
     }
     remaining = remaining.slice(match.index + match[0].length);
   }
@@ -280,11 +308,22 @@ function renderInlineMath(text, keyPrefix){
 function renderMathText(text){
   if (typeof text !== "string") return text;
   const parts = text.split("`");
-  return parts.map((part, i) =>
-    i % 2 === 1
-      ? <bdi dir="ltr" className="math-ltr arabic-num" key={i}>{renderInlineMath(part, "m" + i)}</bdi>
-      : <React.Fragment key={i}>{renderInlineMath(part, "p" + i)}</React.Fragment>
-  );
+  return parts.map((part, i) => {
+    // دعم الأقواس الكبيرة جداً \Big والأقواس المتوسطة \big
+    const subParts = part.split(/(\\big\(|\\big\)|\\Big\(|\\Big\))/g);
+    
+    const renderedSubParts = subParts.map((sub, j) => {
+      if (sub === '\\big(') return <span key={"bl"+j} className="text-3xl inline-block align-middle mx-0.5 font-normal" style={{ transform: "translateY(-1px)" }}>(</span>;
+      if (sub === '\\big)') return <span key={"br"+j} className="text-3xl inline-block align-middle mx-0.5 font-normal" style={{ transform: "translateY(-1px)" }}>)</span>;
+      if (sub === '\\Big(') return <span key={"Bbl"+j} className="text-5xl inline-block align-middle mx-1 font-normal" style={{ transform: "translateY(-4px)" }}>(</span>;
+      if (sub === '\\Big)') return <span key={"Bbr"+j} className="text-5xl inline-block align-middle mx-1 font-normal" style={{ transform: "translateY(-4px)" }}>)</span>;
+      return <React.Fragment key={"sub"+j}>{renderInlineMath(sub, "m" + i + "s" + j)}</React.Fragment>;
+    });
+
+    return i % 2 === 1
+      ? <bdi dir="ltr" className="math-ltr arabic-num" key={i}>{renderedSubParts}</bdi>
+      : <React.Fragment key={i}>{renderedSubParts}</React.Fragment>;
+  });
 }
 
 function CornerMark({ position, color }){
