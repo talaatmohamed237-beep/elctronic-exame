@@ -121,7 +121,7 @@ const QUESTIONS = [
     correctIndex: 2,
   },
   {
-    q: "قارن بين:\nالقيمة الأولى: \\P(\\f{٤||٥};;١٠)\nالقيمة الثانية: \\P(\\f{٤||٥};;٤) × \\P(\\f{٤||٥};;٣)",
+    q: "قارن بين:\nالقيمة الأولى: \\P((\\f{٤||٥});;١٠)\nالقيمة الثانية: \\P((\\f{٤||٥});;٤) × \\P((\\f{٤||٥});;٣)",
     options: ["القيمة الأولى أكبر", "القيمة الثانية أكبر", "القيمتان متساويتان", "المعطيات غير كافية"],
     correctIndex: 1,
     layout: "compare",
@@ -137,15 +137,16 @@ const QUESTIONS = [
     correctIndex: 1,
   },
   {
-    q: "قارن بين:\nالقيمة الأولى: - \\P(٥;;١٤٣٦)\nالقيمة الثانية: - \\P(٥;;٢٠١٥)",
+    q: "قارن بين:\nالقيمة الأولى: \\P((-٥);;١٤٣٦)\nالقيمة الثانية: \\P((-٥);;٢٠١٥)",
     options: ["القيمة الأولى أكبر", "القيمة الثانية أكبر", "القيمتان متساويتان", "المعطيات غير كافية"],
     correctIndex: 0,
     layout: "compare",
   },
   {
-    q: "إذا كان \\P(س;;ص) = ٥ ، احسب قيمة ١٠ \\P(س;;-ص)",
-    options: ["٢", "٥", "٧", "١٠"],
+    q: "قارن بين:\nالقيمة الأولى: \\P((\\P(٣;;٢));;٣) × \\P((\\P(٤;;-١));;-٤)\nالقيمة الثانية: (\\f{١||٢})",
+    options: ["القيمة الأولى أكبر", "القيمة الثانية أكبر", "القيمتان متساويتان", "المعطيات غير كافية"],
     correctIndex: 0,
+    layout: "compare",
   },
 ];
 
@@ -196,6 +197,33 @@ function BigFraction({ num, den }){
   );
 }
 
+function matchPow(s){
+  // مطابقة أمر الأس \P(قاعدة;;أس) مع دعم تداخل الأقواس (أس داخل أس)
+  let at = s.indexOf("\\P(");
+  while (at !== -1){
+    const open = at + 2;
+    let depth = 0, sep = -1;
+    for (let j = open; j < s.length; j++){
+      const ch = s[j];
+      if (ch === "(") depth++;
+      else if (ch === ")"){
+        depth--;
+        if (depth === 0){
+          if (sep !== -1){
+            return { index: at, 0: s.slice(at, j + 1), 1: s.slice(open + 1, sep), 2: s.slice(sep + 2, j) };
+          }
+          break;
+        }
+      }
+      else if (ch === ";" && s[j+1] === ";" && depth === 1 && sep === -1){
+        sep = j;
+      }
+    }
+    at = s.indexOf("\\P(", at + 1);
+  }
+  return null;
+}
+
 function Power({ base, exp }){
   return (
     <span dir="rtl" className="inline-flex items-start align-middle mx-[1px]" style={{verticalAlign:"middle"}}>
@@ -210,7 +238,7 @@ function renderInlineMath(text, keyPrefix){
   const bigRe = /\\F\(([\s\S]*?);;([\s\S]*?)\)/;
   const smallRe = /\\f\{([^{}]*?)\|\|([^{}]*?)\}/;
   const rootRe = /\\R\(([\s\S]*?)\)/; // أمر الجذر الجديد
-  const powRe = /\\P\(([\s\S]*?);;([\s\S]*?)\)/; // أمر الأس (قاعدة;;أس)
+  // ملاحظة: مطابقة الأس تتم عبر matchPow (تدعم الأس المتداخل)
 
   const nodes = [];
   let remaining = text;
@@ -220,7 +248,7 @@ function renderInlineMath(text, keyPrefix){
     const bigMatch = bigRe.exec(remaining);
     const smallMatch = smallRe.exec(remaining);
     const rootMatch = rootRe.exec(remaining);
-    const powMatch = powRe.exec(remaining);
+    const powMatch = matchPow(remaining);
 
     let match = null;
     let type = "";
