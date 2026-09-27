@@ -1,36 +1,56 @@
 (function () {
-  const endpoint = "https://script.google.com/macros/s/AKfycbzqH5QKFC43b7KNHFvdNr_Fgm6LzQGqEjbIQDay6lJQEkKAIgz_T27y34bABo99tIg/exec";
   const teacherSheet = "https://docs.google.com/spreadsheets/d/1efAu7VwrzfGjTfsGxG1ZRERjJF50cR48fZLcLhFMCy4/edit";
-  function submitAttempt({ name, quiz, questions, answers }) {
-    const safeQuestions = Array.isArray(questions) ? questions : [];
-    const safeAnswers = answers || {};
-    const answered = safeQuestions.reduce((count, _q, i) =>
-      count + (safeAnswers[i] === undefined || safeAnswers[i] === null ? 0 : 1), 0);
-    const correct = safeQuestions.reduce((count, q, i) =>
-      count + (safeAnswers[i] === q.correctIndex ? 1 : 0), 0);
-    const unanswered = safeQuestions.length - answered;
-    const wrong = answered - correct;
-    const record = {
-      name: String(name || "").trim().replace(/\s+/g, " "),
-      quiz: String(quiz || "اختبار"),
-      date: new Date().toISOString(),
-      score: safeQuestions.length ? Math.round(correct * 100 / safeQuestions.length) : 0,
-      correct,
-      wrong,
-      unanswered,
-      questions: safeQuestions,
-      answers: safeAnswers
-    };
-    try {
-      fetch(endpoint, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "text/plain;charset=UTF-8" },
-        body: JSON.stringify(record),
-        keepalive: true
-      });
-    } catch (_error) {}
+  const sessionKey = "quiz_student_session_v1";
+
+  async function request(payload) {
+    const response = await fetch("/api/quiz", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    let result;
+    try { result = await response.json(); } catch (_error) { throw new Error("تعذر قراءة رد الخادم."); }
+    if (!response.ok || !result.ok) throw new Error(result.message || "تعذر تنفيذ الطلب.");
+    return result;
   }
-  window.QuizSync = { submitAttempt, teacherSheet };
+
+  function saveSession(session) {
+    localStorage.setItem(sessionKey, JSON.stringify(session));
+  }
+
+  function getSession() {
+    try { return JSON.parse(localStorage.getItem(sessionKey) || "null"); } catch (_error) { return null; }
+  }
+
+  async function authenticate({ mode, displayName, username, password }) {
+    const result = await request({ action: mode, displayName, username, password });
+    const session = { token: result.token, displayName: result.displayName, username: result.username };
+    saveSession(session);
+    return session;
+  }
+
+  async function resumeSession() {
+    const session = getSession();
+    if (!session || !session.token) return null;
+    try {
+      const result = await request({ action: "resume", token: session.token });
+      const updated = { token: session.token, displayName: result.displayName, username: result.username };
+      saveSession(updated);
+      return updated;
+    } catch (_error) {
+      localStorage.removeItem(sessionKey);
+      return null;
+    }
+  }
+
+  function signOut() { localStorage.removeItem(sessionKey); }
+
+  async function submitAttempt({ quiz, questions, answers }) {
+    const session = getSession();
+    if (!session || !session.token) throw new Error("انتهت جلسة الدخول. سجّل الدخول مرة أخرى ثم أعد تسليم الاختبار.");
+    return request({ action: "submit", token: session.token, quiz, questions, answers });
+  }
+
+  window.QuizSync = { authenticate, resumeSession, signOut, submitAttempt, teacherSheet };
 })();
 
