@@ -1,5 +1,4 @@
 (function () {
-  const teacherSheet = "https://docs.google.com/spreadsheets/d/1efAu7VwrzfGjTfsGxG1ZRERjJF50cR48fZLcLhFMCy4/edit";
   const sessionKey = "quiz_student_session_v1";
 
   async function request(payload) {
@@ -51,6 +50,6 @@
     return request({ action: "submit", token: session.token, quiz, questions, answers });
   }
 
-  window.QuizSync = { authenticate, resumeSession, signOut, submitAttempt, teacherSheet };
+  window.QuizSync = { authenticate, resumeSession, signOut, submitAttempt };
 })();
 

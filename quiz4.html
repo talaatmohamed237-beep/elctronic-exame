@@ -902,7 +902,6 @@ function NameScreen({ initialName, onSubmit }){
         <p className="text-xs font-semibold mb-5" style={{color:error?"var(--bad)":"var(--slate)"}}>{error || (mode==="register" ? "استخدم الحساب نفسه في كل الاختبارات لتجميع سجل محاولاتك." : "سجّل الدخول بالحساب نفسه لمتابعة سجل اختباراتك.")}</p>
         <button disabled={busy} type="submit" className="w-full py-4 rounded-xl font-display font-bold text-white text-lg disabled:opacity-60" style={{background:"linear-gradient(135deg, var(--teal), var(--teal-deep))"}}>{busy?"جارٍ التحقق...":mode==="register"?"إنشاء الحساب":"دخول ومتابعة"}</button>
       </form>
-      <a href={window.QuizSync.teacherSheet} target="_blank" rel="noopener noreferrer" className="block text-center text-xs font-bold mt-5 underline" style={{color:"var(--slate)"}}>دخول المعلم إلى سجل الطلاب</a>
     </FramedCard>
   </div></div>;
 }
