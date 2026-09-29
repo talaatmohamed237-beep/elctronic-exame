@@ -852,58 +852,41 @@ function ResultsScreen({ answers, onRestart }){
 }
 
 function NameScreen({ initialName, onSubmit }){
-  const saved = window.QuizSync.resumeSession;
-  const [mode, setMode] = useState("login");
-  const [displayName, setDisplayName] = useState(initialName || "");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [name, setName] = useState(() => {
+    if (initialName) return initialName;
+    try { return localStorage.getItem("quiz_student_name") || ""; } catch (_error) { return ""; }
+  });
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [checking, setChecking] = useState(true);
 
-  useEffect(() => {
-    let alive = true;
-    saved().then(session => { if (alive && session) onSubmit(session.displayName); })
-      .catch(() => {}).finally(() => { if (alive) setChecking(false); });
-    return () => { alive = false; };
-  }, []);
-
-  async function submit(e){
+  function submit(e) {
     e.preventDefault();
-    if (busy) return;
-    setBusy(true); setError("");
-    try {
-      const session = await window.QuizSync.authenticate({ mode, displayName, username, password });
-      onSubmit(session.displayName);
-    } catch (err) { setError(err.message || "تعذر تسجيل الدخول."); }
-    finally { setBusy(false); }
+    const clean = name.trim().replace(/\s+/g, " ");
+    if (clean.length < 2 || clean.length > 80) {
+      setError("اكتب اسمك كاملًا (من حرفين إلى 80 حرفًا).");
+      return;
+    }
+    try { localStorage.setItem("quiz_student_name", clean); } catch (_error) {}
+    onSubmit(clean);
   }
 
-  if (checking) return <div className="flex justify-center py-20"><p className="font-bold" style={{color:"var(--slate)"}}>جارٍ التحقق من حسابك...</p></div>;
-  return <div className="flex items-start sm:items-center justify-center"><div className="max-w-xl w-full fade-in">
-    <FramedCard className="p-8 sm:p-10">
-      <p className="text-xs font-bold mb-1" style={{color:"var(--rose-deep)"}}>{QUIZ_KICKER}</p>
-      <h1 className="font-display font-black text-3xl sm:text-4xl leading-tight mb-2" style={{color:"var(--ink)"}}>{QUIZ_TITLE}</h1>
-      <p className="text-[var(--slate)] mb-6 font-bold">{QUIZ_SUBTITLE}</p>
-      <div className="grid grid-cols-2 gap-2 mb-5">
-        <button type="button" onClick={()=>{setMode("login");setError("");}} className="py-3 rounded-xl font-bold border-2" style={{borderColor:mode==="login"?"var(--teal)":"var(--line)",color:mode==="login"?"var(--teal-deep)":"var(--slate)"}}>تسجيل الدخول</button>
-        <button type="button" onClick={()=>{setMode("register");setError("");}} className="py-3 rounded-xl font-bold border-2" style={{borderColor:mode==="register"?"var(--teal)":"var(--line)",color:mode==="register"?"var(--teal-deep)":"var(--slate)"}}>حساب جديد</button>
+  return (
+    <div className="flex items-start sm:items-center justify-center">
+      <div className="max-w-xl w-full fade-in">
+        <FramedCard className="p-8 sm:p-10">
+          <p className="text-xs font-bold mb-1" style={{color:"var(--rose-deep)"}}>{QUIZ_KICKER}</p>
+          <h1 className="font-display font-black text-3xl sm:text-4xl leading-tight mb-2" style={{color:"var(--ink)"}}>{QUIZ_TITLE}</h1>
+          <p className="text-[var(--slate)] mb-6 font-bold">{QUIZ_SUBTITLE}</p>
+          <form onSubmit={submit}>
+            <label className="block text-sm font-bold mb-2" style={{color:"var(--ink)"}}>اكتب اسمك بالكامل
+              <input required autoFocus maxLength={80} autoComplete="name" value={name} onChange={e => { setName(e.target.value); if (error) setError(""); }} placeholder="الاسم كما يعرفه المعلم" className="block w-full py-4 px-4 mt-2 mb-3 rounded-xl border-2 bg-white text-lg font-bold outline-none" style={{borderColor:error?"var(--bad)":"var(--line)",color:"var(--ink)"}} />
+            </label>
+            <p className="text-xs font-semibold mb-5" style={{color:error?"var(--bad)":"var(--slate)"}}>{error || "سيظهر اسمك ونتيجة كل محاولة في سجل المعلم بعد التسليم."}</p>
+            <button type="submit" className="w-full py-4 rounded-xl font-display font-bold text-white text-lg shadow-sm" style={{background:"linear-gradient(135deg, var(--teal), var(--teal-deep))"}}>متابعة</button>
+          </form>
+        </FramedCard>
       </div>
-      <form onSubmit={submit}>
-        {mode === "register" && <label className="block text-sm font-bold mb-2" style={{color:"var(--ink)"}}>اسم الطالب الكامل
-          <input required maxLength={80} autoComplete="name" value={displayName} onChange={e=>setDisplayName(e.target.value)} placeholder="الاسم كما يعرفه المعلم" className="block w-full py-3 px-4 mt-2 mb-4 rounded-xl border-2 bg-white text-base font-bold outline-none" style={{borderColor:"var(--line)",color:"var(--ink)"}} />
-        </label>}
-        <label className="block text-sm font-bold mb-2" style={{color:"var(--ink)"}}>اسم المستخدم
-          <input required minLength={3} maxLength={30} pattern="[A-Za-z0-9._-]{3,30}" autoComplete="username" value={username} onChange={e=>setUsername(e.target.value)} placeholder="مثال: ahmed_123" className="block w-full py-3 px-4 mt-2 mb-4 rounded-xl border-2 bg-white text-left text-base font-bold outline-none" dir="ltr" style={{borderColor:"var(--line)",color:"var(--ink)"}} />
-        </label>
-        <label className="block text-sm font-bold mb-2" style={{color:"var(--ink)"}}>كلمة المرور
-          <input required minLength={8} maxLength={128} type="password" autoComplete={mode==="register"?"new-password":"current-password"} value={password} onChange={e=>setPassword(e.target.value)} placeholder="8 أحرف على الأقل" className="block w-full py-3 px-4 mt-2 mb-3 rounded-xl border-2 bg-white text-left text-base font-bold outline-none" dir="ltr" style={{borderColor:"var(--line)",color:"var(--ink)"}} />
-        </label>
-        <p className="text-xs font-semibold mb-5" style={{color:error?"var(--bad)":"var(--slate)"}}>{error || (mode==="register" ? "استخدم الحساب نفسه في كل الاختبارات لتجميع سجل محاولاتك." : "سجّل الدخول بالحساب نفسه لمتابعة سجل اختباراتك.")}</p>
-        <button disabled={busy} type="submit" className="w-full py-4 rounded-xl font-display font-bold text-white text-lg disabled:opacity-60" style={{background:"linear-gradient(135deg, var(--teal), var(--teal-deep))"}}>{busy?"جارٍ التحقق...":mode==="register"?"إنشاء الحساب":"دخول ومتابعة"}</button>
-      </form>
-    </FramedCard>
-  </div></div>;
+    </div>
+  );
 }
 
 function App(){
@@ -911,25 +894,50 @@ function App(){
   const [studentName, setStudentName] = useState("");
   const [finalAnswers, setFinalAnswers] = useState({});
   const submitted = useRef(false);
+
   function handleNameSubmit(name){ setStudentName(name); setStage("start"); }
-  function handleEditName(){ window.QuizSync.signOut(); setStudentName(""); setStage("name"); }
+  function handleEditName(){
+    try { localStorage.removeItem("quiz_student_name"); } catch (_error) {}
+    setStudentName("");
+    setStage("name");
+  }
   function handleStart(){ submitted.current = false; setStage("quiz"); }
   async function handleFinish(answers){
-    if (!submitted.current){
-      submitted.current = true;
-      try { await window.QuizSync.submitAttempt({quiz:QUIZ_TITLE+" — "+QUIZ_SUBTITLE, questions:QUESTIONS, answers}); }
-      catch (err) { submitted.current = false; alert(err.message || "تعذر حفظ المحاولة. أعد التسليم."); return; }
+    if (submitted.current) return;
+    submitted.current = true;
+    try {
+      await window.QuizSync.submitAttempt({name:studentName, quiz:QUIZ_TITLE+" — "+QUIZ_SUBTITLE, questions:QUESTIONS, answers});
+    } catch (err) {
+      submitted.current = false;
+      alert(err.message || "تعذر حفظ المحاولة. تحقق من اتصال الإنترنت ثم أعد التسليم.");
+      return;
     }
-    setFinalAnswers(answers); setStage("results");
+    setFinalAnswers(answers);
+    setStage("results");
   }
-  function handleRestart(){ submitted.current = false; setFinalAnswers({}); setStage("start"); }
-  return <AppShell>
-    {stage === "name" && <NameScreen initialName={studentName} onSubmit={handleNameSubmit}/>}
-    {stage === "start" && <StartScreen name={studentName} onStart={handleStart} onEditName={handleEditName}/>}
-    {stage === "quiz" && <QuizScreen onFinish={handleFinish}/>}
-    {stage === "results" && <ResultsScreen answers={finalAnswers} onRestart={handleRestart}/>}
-  </AppShell>;
+  function handleRestart(){
+    submitted.current = false;
+    setFinalAnswers({});
+    setStage("start");
+  }
+  function handleNewStudent(){
+    try { localStorage.removeItem("quiz_student_name"); } catch (_error) {}
+    submitted.current = false;
+    setFinalAnswers({});
+    setStudentName("");
+    setStage("name");
+  }
+
+  return (
+    <AppShell>
+      {stage === "name" && <NameScreen initialName={studentName} onSubmit={handleNameSubmit} />}
+      {stage === "start" && <StartScreen name={studentName} onStart={handleStart} onEditName={handleEditName} />}
+      {stage === "quiz" && <QuizScreen name={studentName} onFinish={handleFinish} />}
+      {stage === "results" && <ResultsScreen name={studentName} answers={finalAnswers} onRestart={handleRestart} onNewStudent={handleNewStudent} />}
+    </AppShell>
+  );
 }
+
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 </script>
 </body>
