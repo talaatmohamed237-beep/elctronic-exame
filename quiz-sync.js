@@ -13,6 +13,7 @@
     const response = await fetch("/api/quiz", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      keepalive: true,
       body: JSON.stringify({ action: "submitByName", name: cleanName, quiz, questions, answers, token: saved && saved.token })
     });
     let result;

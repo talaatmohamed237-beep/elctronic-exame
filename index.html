@@ -965,25 +965,28 @@ function App(){
   const [stage, setStage] = useState("name");
   const [studentName, setStudentName] = useState("");
   const [finalAnswers, setFinalAnswers] = useState({});
-  const [saving, setSaving] = useState(false);
+  const [saveState, setSaveState] = useState("idle");
   const submitted = useRef(false);
+  const saveRequest = useRef(0);
   function handleNameSubmit(name){ setStudentName(name); setStage("start"); }
   function handleEditName(){ try { localStorage.removeItem("quiz_student_name"); } catch (_error) {} setStudentName(""); setStage("name"); }
   function handleStart(){ submitted.current = false; setStage("quiz"); }
-  async function handleFinish(answers){
+  function saveInBackground(answers){
+    const requestId=++saveRequest.current;
+    setSaveState("saving");
+    window.QuizSync.submitAttempt({name:studentName, quiz:QUIZ_TITLE+" — "+QUIZ_SUBTITLE, questions:QUESTIONS, answers})
+      .then(()=>{ if(saveRequest.current===requestId)setSaveState("saved"); })
+      .catch(err=>{ console.error("تعذر حفظ المحاولة:",err); if(saveRequest.current===requestId)setSaveState("failed"); });
+  }
+  function handleFinish(answers){
     if (submitted.current) return;
     submitted.current = true;
-    setSaving(true);
-    try {
-      await window.QuizSync.submitAttempt({name:studentName, quiz:QUIZ_TITLE+" — "+QUIZ_SUBTITLE, questions:QUESTIONS, answers});
-      setFinalAnswers(answers);
-      setStage("results");
-    } catch (err) {
-      submitted.current = false;
-      alert(err.message || "تعذر حفظ المحاولة. تحقق من اتصال الإنترنت ثم أعد التسليم.");
-    } finally { setSaving(false); }
+    setFinalAnswers(answers);
+    setStage("results");
+    saveInBackground(answers);
   }
-  function handleRestart(){ submitted.current = false; setFinalAnswers({}); setStage("start"); }
+  function handleRestart(){ submitted.current = false; setFinalAnswers({}); setSaveState("idle"); setStage("start"); }
+  const saveMessage = saveState==="saving" ? "ظهرت نتيجتك؛ جارٍ حفظ المحاولة في سجل المعلم..." : saveState==="saved" ? "تم حفظ المحاولة في سجل المعلم." : "ظهرت النتيجة، لكن تعذر تأكيد حفظها في سجل المعلم.";
   return React.createElement(AppShell, null,
     stage === "name" && React.createElement(NameScreen, {initialName:studentName, onSubmit:handleNameSubmit}),
     stage === "start" && React.createElement(React.Fragment, null,
@@ -991,10 +994,7 @@ function App(){
       React.createElement("p", {className:"text-center text-sm font-bold mt-4", style:{color:"var(--slate)"}}, "الطالب: ", studentName, " — ", React.createElement("button", {onClick:handleEditName, className:"underline"}, "تغيير الاسم"))),
     stage === "quiz" && React.createElement(QuizScreen, {onFinish:handleFinish}),
     stage === "results" && React.createElement(ResultsScreen, {answers:finalAnswers, onRestart:handleRestart}),
-    saving && React.createElement("div", {role:"status", "aria-live":"polite", className:"fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-5"},
-      React.createElement("div", {className:"max-w-md rounded-2xl bg-white p-8 text-center shadow-xl"},
-        React.createElement("p", {className:"font-display text-xl font-bold", style:{color:"var(--ink)"}}, "جارٍ حفظ إجاباتك..."),
-        React.createElement("p", {className:"mt-2 text-sm font-semibold", style:{color:"var(--slate)"}}, "ستظهر النتيجة فور اكتمال الحفظ.")))
+    stage === "results" && saveState!=="idle" && React.createElement("div", {role:"status", "aria-live":"polite", className:"fixed bottom-4 inset-x-4 z-50 mx-auto max-w-lg rounded-xl bg-white px-5 py-3 text-center text-sm font-bold shadow-xl", style:{color:saveState==="failed"?"var(--bad)":"var(--teal-deep)"}}, saveMessage)
   );
 }
 ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/React.createElement(App, null));</script>
