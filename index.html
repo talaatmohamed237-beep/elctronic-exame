@@ -965,6 +965,7 @@ function App(){
   const [stage, setStage] = useState("name");
   const [studentName, setStudentName] = useState("");
   const [finalAnswers, setFinalAnswers] = useState({});
+  const [saving, setSaving] = useState(false);
   const submitted = useRef(false);
   function handleNameSubmit(name){ setStudentName(name); setStage("start"); }
   function handleEditName(){ try { localStorage.removeItem("quiz_student_name"); } catch (_error) {} setStudentName(""); setStage("name"); }
@@ -972,9 +973,15 @@ function App(){
   async function handleFinish(answers){
     if (submitted.current) return;
     submitted.current = true;
-    try { await window.QuizSync.submitAttempt({name:studentName, quiz:QUIZ_TITLE+" — "+QUIZ_SUBTITLE, questions:QUESTIONS, answers}); }
-    catch (err) { submitted.current = false; alert(err.message || "تعذر حفظ المحاولة. تحقق من اتصال الإنترنت ثم أعد التسليم."); return; }
-    setFinalAnswers(answers); setStage("results");
+    setSaving(true);
+    try {
+      await window.QuizSync.submitAttempt({name:studentName, quiz:QUIZ_TITLE+" — "+QUIZ_SUBTITLE, questions:QUESTIONS, answers});
+      setFinalAnswers(answers);
+      setStage("results");
+    } catch (err) {
+      submitted.current = false;
+      alert(err.message || "تعذر حفظ المحاولة. تحقق من اتصال الإنترنت ثم أعد التسليم.");
+    } finally { setSaving(false); }
   }
   function handleRestart(){ submitted.current = false; setFinalAnswers({}); setStage("start"); }
   return React.createElement(AppShell, null,
@@ -983,10 +990,13 @@ function App(){
       React.createElement(StartScreen, {onStart:handleStart}),
       React.createElement("p", {className:"text-center text-sm font-bold mt-4", style:{color:"var(--slate)"}}, "الطالب: ", studentName, " — ", React.createElement("button", {onClick:handleEditName, className:"underline"}, "تغيير الاسم"))),
     stage === "quiz" && React.createElement(QuizScreen, {onFinish:handleFinish}),
-    stage === "results" && React.createElement(ResultsScreen, {answers:finalAnswers, onRestart:handleRestart})
+    stage === "results" && React.createElement(ResultsScreen, {answers:finalAnswers, onRestart:handleRestart}),
+    saving && React.createElement("div", {role:"status", "aria-live":"polite", className:"fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-5"},
+      React.createElement("div", {className:"max-w-md rounded-2xl bg-white p-8 text-center shadow-xl"},
+        React.createElement("p", {className:"font-display text-xl font-bold", style:{color:"var(--ink)"}}, "جارٍ حفظ إجاباتك..."),
+        React.createElement("p", {className:"mt-2 text-sm font-semibold", style:{color:"var(--slate)"}}, "ستظهر النتيجة فور اكتمال الحفظ.")))
   );
 }
-
 ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/React.createElement(App, null));</script>
 </body>
 </html>

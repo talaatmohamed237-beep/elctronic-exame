@@ -888,6 +888,7 @@ function App(){
   const [stage, setStage] = useState("name");
   const [studentName, setStudentName] = useState("");
   const [finalAnswers, setFinalAnswers] = useState({});
+  const [saving, setSaving] = useState(false);
   const submitted = useRef(false);
   function handleNameSubmit(name){ setStudentName(name); setStage("start"); }
   function handleEditName(){ try { localStorage.removeItem("quiz_student_name"); } catch (_error) {} setStudentName(""); setStage("name"); }
@@ -895,9 +896,15 @@ function App(){
   async function handleFinish(answers){
     if (submitted.current) return;
     submitted.current = true;
-    try { await window.QuizSync.submitAttempt({name:studentName, quiz:QUIZ_TITLE+" — "+QUIZ_SUBTITLE, questions:QUESTIONS, answers}); }
-    catch (err) { submitted.current = false; alert(err.message || "تعذر حفظ المحاولة. تحقق من اتصال الإنترنت ثم أعد التسليم."); return; }
-    setFinalAnswers(answers); setStage("results");
+    setSaving(true);
+    try {
+      await window.QuizSync.submitAttempt({name:studentName, quiz:QUIZ_TITLE+" — "+QUIZ_SUBTITLE, questions:QUESTIONS, answers});
+      setFinalAnswers(answers);
+      setStage("results");
+    } catch (err) {
+      submitted.current = false;
+      alert(err.message || "تعذر حفظ المحاولة. تحقق من اتصال الإنترنت ثم أعد التسليم.");
+    } finally { setSaving(false); }
   }
   function handleRestart(){ submitted.current = false; setFinalAnswers({}); setStage("start"); }
   function handleNewStudent(){ try { localStorage.removeItem("quiz_student_name"); } catch (_error) {} submitted.current = false; setFinalAnswers({}); setStudentName(""); setStage("name"); }
@@ -907,6 +914,7 @@ function App(){
       {stage === "start" && <StartScreen name={studentName} onStart={handleStart} onEditName={handleEditName} />}
       {stage === "quiz" && <QuizScreen name={studentName} onFinish={handleFinish} />}
       {stage === "results" && <ResultsScreen name={studentName} answers={finalAnswers} onRestart={handleRestart} onNewStudent={handleNewStudent} />}
+      {saving && <div role="status" aria-live="polite" className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-5"><div className="max-w-md rounded-2xl bg-white p-8 text-center shadow-xl"><p className="font-display text-xl font-bold" style={{color:"var(--ink)"}}>جارٍ حفظ إجاباتك...</p><p className="mt-2 text-sm font-semibold" style={{color:"var(--slate)"}}>ستظهر النتيجة فور اكتمال الحفظ.</p></div></div>}
     </AppShell>
   );
 }
