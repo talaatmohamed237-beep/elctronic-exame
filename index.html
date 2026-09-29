@@ -934,18 +934,13 @@ function NameScreen({ initialName, onSubmit }){
     try { return localStorage.getItem("quiz_student_name") || ""; } catch (_error) { return ""; }
   });
   const [error, setError] = useState("");
-
   function submit(e) {
     e.preventDefault();
     const clean = name.trim().replace(/\s+/g, " ");
-    if (clean.length < 2 || clean.length > 80) {
-      setError("اكتب اسمك كاملًا (من حرفين إلى 80 حرفًا).");
-      return;
-    }
+    if (clean.length < 2 || clean.length > 80) { setError("اكتب اسمك كاملًا (من حرفين إلى 80 حرفًا)."); return; }
     try { localStorage.setItem("quiz_student_name", clean); } catch (_error) {}
     onSubmit(clean);
   }
-
   return (
     <div className="flex items-start sm:items-center justify-center">
       <div className="max-w-xl w-full fade-in">
@@ -971,29 +966,17 @@ function App(){
   const [studentName, setStudentName] = useState("");
   const [finalAnswers, setFinalAnswers] = useState({});
   const submitted = useRef(false);
-
   function handleNameSubmit(name){ setStudentName(name); setStage("start"); }
-  function handleEditName(){
-    try { localStorage.removeItem("quiz_student_name"); } catch (_error) {}
-    setStudentName("");
-    setStage("name");
-  }
+  function handleEditName(){ try { localStorage.removeItem("quiz_student_name"); } catch (_error) {} setStudentName(""); setStage("name"); }
   function handleStart(){ submitted.current = false; setStage("quiz"); }
   async function handleFinish(answers){
     if (submitted.current) return;
     submitted.current = true;
-    try {
-      await window.QuizSync.submitAttempt({name:studentName, quiz:QUIZ_TITLE+" — "+QUIZ_SUBTITLE, questions:QUESTIONS, answers});
-    } catch (err) {
-      submitted.current = false;
-      alert(err.message || "تعذر حفظ المحاولة. تحقق من اتصال الإنترنت ثم أعد التسليم.");
-      return;
-    }
-    setFinalAnswers(answers);
-    setStage("results");
+    try { await window.QuizSync.submitAttempt({name:studentName, quiz:QUIZ_TITLE+" — "+QUIZ_SUBTITLE, questions:QUESTIONS, answers}); }
+    catch (err) { submitted.current = false; alert(err.message || "تعذر حفظ المحاولة. تحقق من اتصال الإنترنت ثم أعد التسليم."); return; }
+    setFinalAnswers(answers); setStage("results");
   }
   function handleRestart(){ submitted.current = false; setFinalAnswers({}); setStage("start"); }
-
   return React.createElement(AppShell, null,
     stage === "name" && React.createElement(NameScreen, {initialName:studentName, onSubmit:handleNameSubmit}),
     stage === "start" && React.createElement(React.Fragment, null,
