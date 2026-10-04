@@ -368,6 +368,16 @@ function formatTime(sec) {
   const s = sec % 60;
   return `${toArabicDigits(String(m).padStart(2, "0"))}:${toArabicDigits(String(s).padStart(2, "0"))}`;
 }
+function formatElapsedTime(totalSeconds){
+  const total = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+  const minuteUnit = minutes === 1 ? "دقيقة" : minutes === 2 ? "دقيقتان" : minutes >= 3 && minutes <= 10 ? "دقائق" : "دقيقة";
+  const secondUnit = seconds === 1 ? "ثانية" : seconds === 2 ? "ثانيتان" : seconds >= 3 && seconds <= 10 ? "ثوان" : "ثانية";
+  if (minutes === 0) return toArabicDigits(seconds) + " " + secondUnit;
+  return toArabicDigits(minutes) + " " + minuteUnit + (seconds ? " و" + toArabicDigits(seconds) + " " + secondUnit : "");
+}
+
 
 /* ----------------------------------------------------------------
    renderMathText
@@ -819,7 +829,7 @@ function QuizScreen({ onFinish }) {
 
 }
 
-function ResultsScreen({ answers, onRestart }) {
+function ResultsScreen({ elapsedSeconds, answers, onRestart }) {
   const [reviewOpen, setReviewOpen] = useState(false);
 
   const { correct, wrong, unanswered, score } = useMemo(() => {
@@ -843,6 +853,10 @@ function ResultsScreen({ answers, onRestart }) {
     React.createElement("p", { className: "text-sm font-semibold text-[var(--slate)] mb-2" }, "\u0646\u062A\u064A\u062C\u062A\u0643 \u0627\u0644\u0646\u0647\u0627\u0626\u064A\u0629"), /*#__PURE__*/
     React.createElement("p", { className: "font-display font-black text-6xl mb-2 arabic-num", style: { color: "var(--ink)" } },
     toArabicDigits(score), /*#__PURE__*/React.createElement("span", { className: "text-2xl" }, "\u066A")
+    ), /*#__PURE__*/
+    React.createElement("div", { className: "mx-auto mb-5 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm sm:text-base font-bold shadow-sm", role: "status", style: { borderColor: "var(--line)", background: "rgba(255,255,255,.82)", color: "var(--teal-deep)" } },
+    React.createElement("span", { "aria-hidden": "true", className: "inline-flex h-7 w-7 items-center justify-center rounded-full", style: { background: "var(--paper-2)" } }, "⏱"),
+    React.createElement("span", null, "اجتزت الاختبار في ", React.createElement("bdi", { dir: "rtl" }, formatElapsedTime(elapsedSeconds)))
     ), /*#__PURE__*/
     React.createElement("p", { className: "font-display font-bold text-lg mb-8", style: { color: gradeColor } }, grade), /*#__PURE__*/
 
@@ -970,12 +984,14 @@ function App(){
   const [stage, setStage] = useState("name");
   const [studentName, setStudentName] = useState("");
   const [finalAnswers, setFinalAnswers] = useState({});
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const startedAt = useRef(0);
   const [saveState, setSaveState] = useState("idle");
   const submitted = useRef(false);
   const saveRequest = useRef(0);
   function handleNameSubmit(name){ setStudentName(name); setStage("start"); }
   function handleEditName(){ try { localStorage.removeItem("quiz_student_name"); } catch (_error) {} setStudentName(""); setStage("name"); }
-  function handleStart(){ submitted.current = false; setStage("quiz"); }
+  function handleStart(){ submitted.current = false; setElapsedSeconds(0); startedAt.current = Date.now(); setStage("quiz"); }
   function saveInBackground(answers){
     const requestId=++saveRequest.current;
     setSaveState("saving");
@@ -986,6 +1002,7 @@ function App(){
   function handleFinish(answers){
     if (submitted.current) return;
     submitted.current = true;
+    setElapsedSeconds(Math.min(TOTAL_TIME, Math.max(0, Math.floor((Date.now() - (startedAt.current || Date.now())) / 1000))));
     setFinalAnswers(answers);
     setStage("results");
     saveInBackground(answers);
@@ -998,7 +1015,7 @@ function App(){
       React.createElement(StartScreen, {onStart:handleStart}),
       React.createElement("p", {className:"text-center text-sm font-bold mt-4", style:{color:"var(--slate)"}}, "الطالب: ", studentName, " — ", React.createElement("button", {onClick:handleEditName, className:"underline"}, "تغيير الاسم"))),
     stage === "quiz" && React.createElement(QuizScreen, {onFinish:handleFinish}),
-    stage === "results" && React.createElement(ResultsScreen, {answers:finalAnswers, onRestart:handleRestart}),
+    stage === "results" && React.createElement(ResultsScreen, {elapsedSeconds, answers:finalAnswers, onRestart:handleRestart}),
     stage === "results" && saveState!=="idle" && React.createElement("div", {role:"status", "aria-live":"polite", className:"fixed bottom-4 inset-x-4 z-50 mx-auto max-w-lg rounded-xl bg-white px-5 py-3 text-center text-sm font-bold shadow-xl", style:{color:saveState==="failed"?"var(--bad)":"var(--teal-deep)"}}, saveMessage)
   );
 }

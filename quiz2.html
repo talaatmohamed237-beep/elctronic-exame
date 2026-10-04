@@ -226,6 +226,16 @@ function formatTime(sec){
   const s = sec%60;
   return `${toArabicDigits(String(m).padStart(2,"0"))}:${toArabicDigits(String(s).padStart(2,"0"))}`;
 }
+function formatElapsedTime(totalSeconds){
+  const total = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+  const minuteUnit = minutes === 1 ? "دقيقة" : minutes === 2 ? "دقيقتان" : minutes >= 3 && minutes <= 10 ? "دقائق" : "دقيقة";
+  const secondUnit = seconds === 1 ? "ثانية" : seconds === 2 ? "ثانيتان" : seconds >= 3 && seconds <= 10 ? "ثوان" : "ثانية";
+  if (minutes === 0) return toArabicDigits(seconds) + " " + secondUnit;
+  return toArabicDigits(minutes) + " " + minuteUnit + (seconds ? " و" + toArabicDigits(seconds) + " " + secondUnit : "");
+}
+
 
 function Fraction({ num, den }){
   return (
@@ -755,7 +765,7 @@ function QuizScreen({ onFinish }){
   );
 }
 
-function ResultsScreen({ answers, onRestart }){
+function ResultsScreen({ elapsedSeconds, answers, onRestart }){
   const [reviewOpen, setReviewOpen] = useState(false);
 
   const { correct, wrong, unanswered, score } = useMemo(() => {
@@ -780,6 +790,10 @@ function ResultsScreen({ answers, onRestart }){
         <p className="font-display font-black text-6xl mb-2 arabic-num" style={{color:"var(--ink)"}}>
           {toArabicDigits(score)}<span className="text-2xl">٪</span>
         </p>
+        <div className="mx-auto mb-5 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm sm:text-base font-bold shadow-sm" style={{borderColor:"var(--line)", background:"rgba(255,255,255,.82)", color:"var(--teal-deep)"}}>
+          <span aria-hidden="true" className="inline-flex h-7 w-7 items-center justify-center rounded-full" style={{background:"var(--paper-2)"}}>⏱</span>
+          <span>اجتزت الاختبار في <bdi dir="rtl">{formatElapsedTime(elapsedSeconds)}</bdi></span>
+        </div>
         <p className="font-display font-bold text-lg mb-8" style={{color:gradeColor}}>{grade}</p>
 
         <div className="grid grid-cols-3 gap-3">
@@ -900,12 +914,14 @@ function App(){
   const [stage, setStage] = useState("name");
   const [studentName, setStudentName] = useState("");
   const [finalAnswers, setFinalAnswers] = useState({});
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const startedAt = useRef(0);
   const [saveState, setSaveState] = useState("idle");
   const submitted = useRef(false);
   const saveRequest = useRef(0);
   function handleNameSubmit(name){ setStudentName(name); setStage("start"); }
   function handleEditName(){ try { localStorage.removeItem("quiz_student_name"); } catch (_error) {} setStudentName(""); setStage("name"); }
-  function handleStart(){ submitted.current = false; setStage("quiz"); }
+  function handleStart(){ submitted.current = false; setElapsedSeconds(0); startedAt.current = Date.now(); setStage("quiz"); }
   function saveInBackground(answers){
     const requestId=++saveRequest.current;
     setSaveState("saving");
@@ -916,6 +932,7 @@ function App(){
   function handleFinish(answers){
     if (submitted.current) return;
     submitted.current = true;
+    setElapsedSeconds(Math.min(TOTAL_TIME, Math.max(0, Math.floor((Date.now() - (startedAt.current || Date.now())) / 1000))));
     setFinalAnswers(answers);
     setStage("results");
     saveInBackground(answers);
@@ -928,7 +945,7 @@ function App(){
       {stage === "name" && <NameScreen initialName={studentName} onSubmit={handleNameSubmit} />}
       {stage === "start" && <StartScreen name={studentName} onStart={handleStart} onEditName={handleEditName} />}
       {stage === "quiz" && <QuizScreen name={studentName} onFinish={handleFinish} />}
-      {stage === "results" && <ResultsScreen name={studentName} answers={finalAnswers} onRestart={handleRestart} onNewStudent={handleNewStudent} />}
+      {stage === "results" && <ResultsScreen name={studentName} elapsedSeconds={elapsedSeconds} answers={finalAnswers} onRestart={handleRestart} onNewStudent={handleNewStudent} />}
       {stage === "results" && saveState!=="idle" && <div role="status" aria-live="polite" className="fixed bottom-4 inset-x-4 z-50 mx-auto max-w-lg rounded-xl bg-white px-5 py-3 text-center text-sm font-bold shadow-xl" style={{color:saveState==="failed"?"var(--bad)":"var(--teal-deep)"}}>{saveMessage}</div>}
     </AppShell>
   );
