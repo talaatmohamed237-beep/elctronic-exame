@@ -113,6 +113,7 @@ const QUESTIONS = [
   {
     q: "ما الحد التالي في المتتابعة \\f{١||٥} ، \\f{٣||٥} ، ١ ، \\f{٧||٥} ، ......",
     options: ["١ \\f{٤||٥}", "١ \\f{٣||٥}", "١ \\f{٢||٥}", "١ \\f{١||٥}"],
+    optionsDir: "ltr",
     correctIndex: 0,
   },
   {
@@ -878,7 +879,7 @@ function QuizScreen({ name, onFinish }){
                 >
                   {["أ","ب","ج","د"][i]}
                 </span>
-                <span className="text-[17px] font-bold arabic-num" style={{color:"var(--ink)"}}>{renderMathText(opt)}</span>
+                <span dir={current.optionsDir || "rtl"} className="text-[17px] font-bold arabic-num" style={{color:"var(--ink)", direction:current.optionsDir || "rtl", unicodeBidi:"isolate"}}>{renderMathText(opt)}</span>
               </button>
             );
           })}
@@ -1082,7 +1083,7 @@ function ResultsScreen({ name, answers, onRestart, onNewStudent }){
                               style={{borderColor:"var(--line)", color:"var(--slate)"}}>
                           {["أ","ب","ج","د"][oi]}
                         </span>
-                        <span className="text-[15px] font-bold arabic-num" style={{color:"var(--ink)"}}>{renderMathText(opt)}</span>
+                        <span dir={q.optionsDir || "rtl"} className="text-[15px] font-bold arabic-num" style={{color:"var(--ink)", direction:q.optionsDir || "rtl", unicodeBidi:"isolate"}}>{renderMathText(opt)}</span>
                         {isRight && <span className="ms-auto text-xs font-bold" style={{color:"var(--good)"}}>الإجابة الصحيحة</span>}
                         {isPicked && !isRight && <span className="ms-auto text-xs font-bold" style={{color:"var(--bad)"}}>اخترتها</span>}
                       </div>
