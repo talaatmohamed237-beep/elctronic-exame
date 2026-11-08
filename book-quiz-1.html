@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Quiz 1 | Book 1A • Reading (Questions 21–50)</title>
+<title>Quiz 1 | Book 1A • Reading (Questions 1–30)</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -98,7 +98,7 @@ const { useState, useEffect, useRef, useMemo } = React;
 
 const QUESTIONS = [
   {
-    "sourceNumber": 21,
+    "sourceNumber": 1,
     "q": "Jim: Hello. How are you?\nJoe: ________________.",
     "options": [
       "Goodbye.",
@@ -109,7 +109,7 @@ const QUESTIONS = [
     "correctIndex": 1
   },
   {
-    "sourceNumber": 22,
+    "sourceNumber": 2,
     "q": "What's that?",
     "options": [
       "They're tables.",
@@ -120,7 +120,7 @@ const QUESTIONS = [
     "correctIndex": 2
   },
   {
-    "sourceNumber": 23,
+    "sourceNumber": 3,
     "q": "Those are _______________.",
     "options": [
       "book",
@@ -131,7 +131,7 @@ const QUESTIONS = [
     "correctIndex": 3
   },
   {
-    "sourceNumber": 24,
+    "sourceNumber": 4,
     "q": "Are they books? No, they ________________.",
     "options": [
       "is",
@@ -142,7 +142,7 @@ const QUESTIONS = [
     "correctIndex": 2
   },
   {
-    "sourceNumber": 25,
+    "sourceNumber": 5,
     "q": "Go to the classroom _______________ seven o'clock.",
     "options": [
       "in",
@@ -153,7 +153,7 @@ const QUESTIONS = [
     "correctIndex": 1
   },
   {
-    "sourceNumber": 26,
+    "sourceNumber": 6,
     "q": "Mrs. Wilson: Hello.\nMr. Brown: _______________.",
     "options": [
       "Good morning.",
@@ -164,7 +164,7 @@ const QUESTIONS = [
     "correctIndex": 0
   },
   {
-    "sourceNumber": 27,
+    "sourceNumber": 7,
     "q": "Today is Wednesday. Tomorrow is ________________.",
     "options": [
       "Sunday.",
@@ -175,7 +175,7 @@ const QUESTIONS = [
     "correctIndex": 2
   },
   {
-    "sourceNumber": 28,
+    "sourceNumber": 8,
     "q": "Is she a pilot?",
     "options": [
       "Yes, he is.",
@@ -186,7 +186,7 @@ const QUESTIONS = [
     "correctIndex": 3
   },
   {
-    "sourceNumber": 29,
+    "sourceNumber": 9,
     "q": "_______________ this book on the desk, please.",
     "options": [
       "Put",
@@ -197,7 +197,7 @@ const QUESTIONS = [
     "correctIndex": 0
   },
   {
-    "sourceNumber": 30,
+    "sourceNumber": 10,
     "q": "A penny and a cent are the ________________.",
     "options": [
       "different",
@@ -208,7 +208,7 @@ const QUESTIONS = [
     "correctIndex": 2
   },
   {
-    "sourceNumber": 31,
+    "sourceNumber": 11,
     "q": "A B C D E F are _______________.",
     "options": [
       "words",
@@ -219,7 +219,7 @@ const QUESTIONS = [
     "correctIndex": 3
   },
   {
-    "sourceNumber": 32,
+    "sourceNumber": 12,
     "q": "The picture is _______________ the wall.",
     "options": [
       "under",
@@ -230,7 +230,7 @@ const QUESTIONS = [
     "correctIndex": 1
   },
   {
-    "sourceNumber": 33,
+    "sourceNumber": 13,
     "q": "That's a dime. It's ________________ a nickel.",
     "options": [
       "isn't",
@@ -241,7 +241,7 @@ const QUESTIONS = [
     "correctIndex": 1
   },
   {
-    "sourceNumber": 34,
+    "sourceNumber": 14,
     "q": "What are these?",
     "options": [
       "That's a desk.",
@@ -252,7 +252,7 @@ const QUESTIONS = [
     "correctIndex": 3
   },
   {
-    "sourceNumber": 35,
+    "sourceNumber": 15,
     "q": "A week is _______________ days.",
     "options": [
       "two",
@@ -263,7 +263,7 @@ const QUESTIONS = [
     "correctIndex": 1
   },
   {
-    "sourceNumber": 36,
+    "sourceNumber": 16,
     "q": "Sit ________________, please.",
     "options": [
       "under",
@@ -274,7 +274,7 @@ const QUESTIONS = [
     "correctIndex": 1
   },
   {
-    "sourceNumber": 37,
+    "sourceNumber": 17,
     "q": "Sgt. Jones: See you later.\nSgt. Gray: _______________",
     "options": [
       "Good morning.",
@@ -285,7 +285,7 @@ const QUESTIONS = [
     "correctIndex": 2
   },
   {
-    "sourceNumber": 38,
+    "sourceNumber": 18,
     "q": "The chairs are _______________ the classroom.",
     "options": [
       "on",
@@ -296,7 +296,7 @@ const QUESTIONS = [
     "correctIndex": 2
   },
   {
-    "sourceNumber": 39,
+    "sourceNumber": 19,
     "q": "14, 40, 21, 7, 35 are ________________.",
     "options": [
       "money",
@@ -307,7 +307,7 @@ const QUESTIONS = [
     "correctIndex": 2
   },
   {
-    "sourceNumber": 40,
+    "sourceNumber": 20,
     "q": "Ahmad: What's your student control number?\nZaid: 8621416\nAhmad: _______________ that please.",
     "options": [
       "Spell",
@@ -318,7 +318,7 @@ const QUESTIONS = [
     "correctIndex": 2
   },
   {
-    "sourceNumber": 41,
+    "sourceNumber": 21,
     "q": "What are you?",
     "options": [
       "We're cooks.",
@@ -329,7 +329,7 @@ const QUESTIONS = [
     "correctIndex": 0
   },
   {
-    "sourceNumber": 42,
+    "sourceNumber": 22,
     "q": "________________ I a student?",
     "options": [
       "Is",
@@ -340,7 +340,7 @@ const QUESTIONS = [
     "correctIndex": 1
   },
   {
-    "sourceNumber": 43,
+    "sourceNumber": 23,
     "q": "Is this a clock?",
     "options": [
       "Yes, it is.",
@@ -351,7 +351,7 @@ const QUESTIONS = [
     "correctIndex": 0
   },
   {
-    "sourceNumber": 44,
+    "sourceNumber": 24,
     "q": "Under, in, book, and write are _______________.",
     "options": [
       "numbers",
@@ -362,7 +362,7 @@ const QUESTIONS = [
     "correctIndex": 1
   },
   {
-    "sourceNumber": 45,
+    "sourceNumber": 25,
     "q": "________________ Tom and David doctors? Yes, they are.",
     "options": [
       "Am",
@@ -373,7 +373,7 @@ const QUESTIONS = [
     "correctIndex": 2
   },
   {
-    "sourceNumber": 46,
+    "sourceNumber": 26,
     "q": "Is Ahmad a cook?",
     "options": [
       "Yes, he cooks.",
@@ -384,7 +384,7 @@ const QUESTIONS = [
     "correctIndex": 3
   },
   {
-    "sourceNumber": 47,
+    "sourceNumber": 27,
     "q": "Pennies, dimes and quarters are _______________.",
     "options": [
       "dollars",
@@ -395,7 +395,7 @@ const QUESTIONS = [
     "correctIndex": 1
   },
   {
-    "sourceNumber": 48,
+    "sourceNumber": 28,
     "q": "Is this your classroom?",
     "options": [
       "No, it is Tom’s.",
@@ -406,7 +406,7 @@ const QUESTIONS = [
     "correctIndex": 0
   },
   {
-    "sourceNumber": 49,
+    "sourceNumber": 29,
     "q": "You and I are pilots. _______________ pilots.",
     "options": [
       "We're",
@@ -417,7 +417,7 @@ const QUESTIONS = [
     "correctIndex": 0
   },
   {
-    "sourceNumber": 50,
+    "sourceNumber": 30,
     "q": "A: What's your name?\nB: _______________",
     "options": [
       "Fine thanks.",
@@ -430,7 +430,7 @@ const QUESTIONS = [
 ];
 const QUIZ_TITLE = "Quiz 1";
 const QUIZ_KICKER = "American Language Course";
-const QUIZ_SUBTITLE = "Book 1A • Reading (Questions 21–50) — ٣٠ سؤالًا";
+const QUIZ_SUBTITLE = "Book 1A • Reading (Questions 1–30) — ٣٠ سؤالًا";
 const SECONDS_PER_QUESTION = 60;
 const TOTAL_TIME = QUESTIONS.length * SECONDS_PER_QUESTION;
 const IS_LOCAL_REVIEW = window.location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(window.location.hostname);
@@ -821,7 +821,7 @@ function StartScreen({ name, onStart, onEditName }){
             {QUIZ_KICKER}
           </h1>
           <p className="text-[var(--slate)] mb-2 font-bold">{QUIZ_SUBTITLE}</p>
-          <p className="text-sm font-semibold mb-5" style={{color:"var(--slate)"}}>الأسئلة الأصلية من ٢١ إلى ٥٠. قسم الاستماع غير مرفق في هذه النسخة.</p>
+          <p className="text-sm font-semibold mb-5" style={{color:"var(--slate)"}}>الأسئلة مرقمة من ١ إلى ٣٠. قسم الاستماع غير مرفق في هذه النسخة.</p>
 
           <div className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-white/60 px-4 py-3 mb-8">
             <div className="w-10 h-10 rounded-full flex items-center justify-center font-display font-black text-lg text-white shrink-0" style={{background:"linear-gradient(135deg, var(--rose), var(--rose-deep))"}}>
